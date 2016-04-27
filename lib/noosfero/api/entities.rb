@@ -112,6 +112,8 @@ module Noosfero
         expose :image, :using => Image
         expose :region, :using => Region
         expose :type
+        expose :custom_header
+        expose :custom_footer
       end
 
       class UserBasic < Entity
@@ -148,6 +150,18 @@ module Noosfero
         expose :members, :using => Person
       end
 
+      class CommentBase < Entity
+        expose :body, :title, :id
+        expose :created_at, :format_with => :timestamp
+        expose :author, :using => Profile
+        expose :reply_of, :using => CommentBase
+      end
+
+      class Comment < CommentBase
+        root 'comments', 'comment'
+        expose :children, as: :replies, :using => Comment
+      end
+
       class ArticleBase < Entity
         root 'articles', 'article'
         expose :id
@@ -177,6 +191,7 @@ module Noosfero
         expose :comments_count
         expose :archived, :documentation => {:type => "Boolean", :desc => "Defines if a article is readonly"}
         expose :type
+        expose :comments, using: CommentBase, :if => lambda{|obj,opt| opt[:params] && ['1','true',true].include?(opt[:params][:show_comments])}
       end
 
       class Article < ArticleBase
@@ -185,18 +200,6 @@ module Noosfero
         expose :children, using: ArticleBase do |article, options|
           article.children.limit(Noosfero::API::V1::Articles::MAX_PER_PAGE)
         end
-      end
-
-      class CommentBase < Entity
-        expose :body, :title, :id
-        expose :created_at, :format_with => :timestamp
-        expose :author, :using => Profile
-        expose :reply_of, :using => CommentBase
-      end
-
-      class Comment < CommentBase
-        root 'comments', 'comment'
-        expose :children, as: :replies, :using => Comment
       end
 
       class User < Entity
