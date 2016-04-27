@@ -427,7 +427,7 @@ require_relative '../../find_by_contents'
       ##########################################
 
       def verify_captcha(remote_ip, params, environment)
-        captcha_plugin_enabled = @plugins.dispatch(:verify_captcha, remote_ip, params, environment).map {|p| p if ! ( p===nil ) }
+        captcha_plugin_enabled = plugins.dispatch(:verify_captcha, remote_ip, params, environment).map {|p| p if ! ( p===nil ) }
         return true if captcha_plugin_enabled.size == 0
         if captcha_plugin_enabled.size > 1
           return render_api_error!(_("Error processing Captcha"), 500, nil, "More than one captcha plugin enabled")
