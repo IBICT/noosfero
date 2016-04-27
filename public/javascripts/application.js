@@ -27,8 +27,6 @@
 * views speficics
 *= require add-and-join.js
 *= require report-abuse.js
-*= require manage-products.js
-*= require catalog.js
 *= require autogrow.js
 *= require slick.js
 *= require block-store.js
@@ -243,8 +241,6 @@ function update_loading(message) {
 function redirect_to(url) {
   document.location=url;
 }
-
-/* Products edition  */
 
 function numbersonly(e, separator) {
   var key;
