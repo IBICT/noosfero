@@ -197,7 +197,7 @@ module Noosfero
       class Article < ArticleBase
         root 'articles', 'article'
         expose :parent, :using => ArticleBase
-        expose :children, using: ArticleBase do |article, options|
+        expose :children, :using => ArticleBase do |article, options|
           article.children.limit(Noosfero::API::V1::Articles::MAX_PER_PAGE)
         end
       end

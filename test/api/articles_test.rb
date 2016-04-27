@@ -177,7 +177,6 @@ class ArticlesTest < ActiveSupport::TestCase
     assert_equal 400, last_response.status
   end
 
-
   should 'perform a vote in a article identified by id' do
     article = fast_create(Article, :profile_id => @person.id, :name => "Some thing")
     @params[:value] = 1
@@ -192,10 +191,8 @@ class ArticlesTest < ActiveSupport::TestCase
   should 'not perform a vote in a archived article' do
     article = fast_create(Article, :profile_id => @person.id, :name => "Some thing", :archived => true)
     @params[:value] = 1
-
     post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
-    json = JSON.parse(last_response.body)
-
+    puts JSON.parse(last_response.body)
     assert_equal 400, last_response.status
   end
 
@@ -208,6 +205,24 @@ class ArticlesTest < ActiveSupport::TestCase
       json = JSON.parse(last_response.body)
      assert json["articles"].last.has_key?(attr)
     end
+  end
+
+  should 'not update hit attribute of a specific child if a article is archived' do
+    folder = fast_create(Folder, :profile_id => user.person.id, :archived => true)
+    article = fast_create(Article, :parent_id => folder.id, :profile_id => user.person.id)
+    get "/api/v1/articles/#{folder.id}/children/#{article.id}?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal 0, json['article']['hits']
+  end
+
+  should 'find archived articles' do
+    article1 = fast_create(Article, :profile_id => user.person.id, :name => "Some thing")
+    article2 = fast_create(Article, :profile_id => user.person.id, :name => "Some thing", :archived => true)
+    params[:archived] = true
+    get "/api/v1/articles/?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_not_includes json["articles"].map { |a| a["id"] }, article1.id
+    assert_includes json["articles"].map { |a| a["id"] }, article2.id
   end
 
   should "update body of article created by me" do
@@ -674,16 +689,6 @@ class ArticlesTest < ActiveSupport::TestCase
     get "api/v1/communities/#{co.id}/articles?#{params.to_query}"
     json = JSON.parse(last_response.body)
     assert_equal json['articles'].count, 2
-  end
-
-  should 'find archived articles' do
-    article1 = fast_create(Article, :profile_id => user.person.id, :name => "Some thing")
-    article2 = fast_create(Article, :profile_id => user.person.id, :name => "Some thing", :archived => true)
-    params[:archived] = true
-    get "/api/v1/articles/?#{params.to_query}"
-    json = JSON.parse(last_response.body)
-    assert_not_includes json["articles"].map { |a| a["id"] }, article1.id
-    assert_includes json["articles"].map { |a| a["id"] }, article2.id
   end
 
   ARTICLE_ATTRIBUTES = %w(followers_count votes_count comments_count)
