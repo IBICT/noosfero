@@ -205,14 +205,15 @@ module Noosfero
       class User < Entity
         root 'users', 'user'
 
-        attrs = [:id,:login,:email]
+        attrs = [:id,:login,:email,:activated?]
+        aliases = {:activated? => :activated}
 
         attrs.each do |attribute|
-          expose attribute, :if => lambda{|user,options| Entities.can_display?(user.person, options, attribute)}
+          name = aliases.has_key?(attribute) ? aliases[attribute] : attribute
+          expose attribute, :as => name, :if => lambda{|user,options| Entities.can_display?(user.person, options, attribute)}
         end
 
         expose :person, :using => Person
-        expose :activated?, as: :activated
         expose :permissions, :if => lambda{|user,options| Entities.can_display?(user.person, options, :permissions, :self)} do |user, options|
           output = {}
           user.person.role_assignments.map do |role_assigment|

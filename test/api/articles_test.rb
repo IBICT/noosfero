@@ -207,14 +207,6 @@ class ArticlesTest < ActiveSupport::TestCase
     end
   end
 
-  should 'not update hit attribute of a specific child if a article is archived' do
-    folder = fast_create(Folder, :profile_id => user.person.id, :archived => true)
-    article = fast_create(Article, :parent_id => folder.id, :profile_id => user.person.id)
-    get "/api/v1/articles/#{folder.id}/children/#{article.id}?#{params.to_query}"
-    json = JSON.parse(last_response.body)
-    assert_equal 0, json['article']['hits']
-  end
-
   should 'find archived articles' do
     article1 = fast_create(Article, :profile_id => user.person.id, :name => "Some thing")
     article2 = fast_create(Article, :profile_id => user.person.id, :name => "Some thing", :archived => true)
