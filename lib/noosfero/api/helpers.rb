@@ -34,6 +34,7 @@ require_relative '../../find_by_contents'
       def current_user
         private_token = (params[PRIVATE_TOKEN_PARAM] || headers['Private-Token']).to_s
         @current_user ||= User.find_by private_token: private_token
+        @current_user ||= plugins.dispatch("api_custom_login", request).first
         @current_user
       end
 
@@ -132,7 +133,7 @@ require_relative '../../find_by_contents'
       def post_article(asset, params)
         return forbidden! unless current_person.can_post_content?(asset)
 
-        klass_type= params[:content_type].nil? ? TinyMceArticle.name : params[:content_type]
+        klass_type = params[:content_type] || params[:article].delete(:type) || TinyMceArticle.name
         return forbidden! unless ARTICLE_TYPES.include?(klass_type)
 
         article = klass_type.constantize.new(params[:article])
@@ -294,6 +295,14 @@ require_relative '../../find_by_contents'
       # the vote without login
       def authenticate_allow_captcha!
         unauthorized! unless current_tmp_user || current_user
+      end
+
+      def profiles_for_person(profiles, person)
+        if person
+          profiles.listed_for_person(person)
+        else
+          profiles.visible
+        end
       end
 
       # Checks the occurrences of uniqueness of attributes, each attribute must be present in the params hash
