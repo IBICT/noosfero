@@ -155,4 +155,12 @@ class SearchTest < ActiveSupport::TestCase
     assert_equal [article2.id], json['articles'].map {|a| a['id']}
   end
 
+  should 'list articles with order' do
+    article1 = fast_create(Article, :profile_id => person.id, created_at: Time.now - 1.day)
+    article2 = fast_create(Article, :profile_id => person.id, created_at: Time.now)
+    params = {order: 'created_at DESC'}
+    get "/api/v1/search/article?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal [article2.id, article1.id], json['articles'].map {|a| a['id']}
+  end
 end
