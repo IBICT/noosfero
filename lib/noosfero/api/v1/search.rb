@@ -19,10 +19,14 @@ module Noosfero
               scope = scope.where(make_conditions_with_parameter(params))
               scope = scope.joins(:categories).where(:categories => {:id => params[:category_ids]}) if params[:category_ids].present?
               scope = scope.where('articles.children_count > 0') if params[:has_children].present?
-              query = params[:query] || ""
-              order = "more_recent"
 
-              options = {:filter => order, :template_id => params[:template_id]}
+              order = make_order_with_parameters(profile || environment, :articles, params)
+              scope = scope.reorder(order)
+
+              query = params[:query] || ""
+              search_order = "more_recent"
+
+              options = {:filter => search_order, :template_id => params[:template_id]}
 
               paginate_options = params.select{|k,v| [:page, :per_page].include?(k.to_sym)}.symbolize_keys
               paginate_options.each_pair{|k,v| v=v.to_i}
