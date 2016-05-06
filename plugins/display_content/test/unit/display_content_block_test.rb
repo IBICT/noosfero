@@ -766,4 +766,17 @@ class DisplayContentBlockTest < ActiveSupport::TestCase
     assert instance_eval(&block.content).index(en_article.name).present?
     assert_nil instance_eval(&block.content).index(pt_article.name)
   end
+
+  should 'not escape html in block content' do
+    profile = create_user('testuser').person
+    a1 = fast_create(TextileArticle, abstract: "<p class='test-article-abstract'>Test</p>", name: 'test article 1', profile_id: profile.id, published_at: DateTime.current)
+
+    block = DisplayContentBlock.new
+    block.sections = [{:value => 'abstract', :checked => true}]
+    block.nodes = [a1.id]
+    box = mock()
+    block.stubs(:box).returns(box)
+    box.stubs(:owner).returns(profile)
+    assert_tag_in_string instance_eval(&block.content), tag: 'p', attributes: { class: 'test-article-abstract' }
+  end
 end
