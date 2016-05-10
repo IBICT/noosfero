@@ -443,10 +443,7 @@ class CmsController < MyProfileController
   end
 
   def refuse_blocks
-    article_types = ['TinyMceArticle', 'TextileArticle', 'Event', 'EnterpriseHomepage'] + @plugins.dispatch(:content_types).map {|type| type.name}
-    if article_types.include?(@type)
-      @no_design_blocks = true
-    end
+    @no_design_blocks = @type.present? && valid_article_type?(@type) ? !@type.constantize.can_display_blocks? : false
   end
 
   def per_page
