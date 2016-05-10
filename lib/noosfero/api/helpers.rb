@@ -267,6 +267,16 @@ require_relative '../../find_by_contents'
         end
       end
 
+      def by_period(scope, params, attribute)
+        from_param = "from_#{attribute}".to_sym
+        until_param = "until_#{attribute}".to_sym
+        from_date = DateTime.parse(params.delete(from_param)) if params[from_param]
+        until_date = DateTime.parse(params.delete(until_param)) if params[until_param]
+        scope = scope.where("#{attribute} >= ? or #{attribute} IS NULL", from_date) unless from_date.nil?
+        scope = scope.where("#{attribute} <= ? or #{attribute} IS NULL", until_date) unless until_date.nil?
+        scope
+      end
+
       def select_filtered_collection_of(object, method, params)
         conditions = make_conditions_with_parameter(params)
         order = make_order_with_parameters(object,method,params)
@@ -275,6 +285,7 @@ require_relative '../../find_by_contents'
         objects = object.send(method)
         objects = by_reference(objects, params)
         objects = by_categories(objects, params)
+        [:start_date, :end_date].each { |attribute| objects = by_period(objects, params, attribute) }
 
         objects = objects.where(conditions).where(timestamp).reorder(order)
 

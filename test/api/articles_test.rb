@@ -748,4 +748,24 @@ class ArticlesTest < ActiveSupport::TestCase
     assert_not_includes json['article']['children'].map {|a| a['id']}, child.id
   end
 
+  should 'list events with period for start date' do
+    Article.destroy_all
+    article1 = fast_create(Event, profile_id: user.person.id, start_date: Time.now)
+    article2 = fast_create(Event, profile_id: user.person.id, start_date: Time.now + 2.day)
+    params[:until_start_date] = Time.now + 1.day
+    get "/api/v1/articles/?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal json["articles"].map { |a| a["id"] }, [article1.id]
+  end
+
+  should 'list events with period for end date' do
+    Article.destroy_all
+    article1 = fast_create(Event, profile_id: user.person.id, end_date: Time.now)
+    article2 = fast_create(Event, profile_id: user.person.id, end_date: Time.now + 2.day)
+    params[:from_end_date] = Time.now + 1.day
+    get "/api/v1/articles/?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal json["articles"].map { |a| a["id"] }, [article2.id]
+  end
+
 end
