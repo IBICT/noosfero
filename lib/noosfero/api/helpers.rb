@@ -272,8 +272,8 @@ require_relative '../../find_by_contents'
         until_param = "until_#{attribute}".to_sym
         from_date = DateTime.parse(params.delete(from_param)) if params[from_param]
         until_date = DateTime.parse(params.delete(until_param)) if params[until_param]
-        scope = scope.where("#{attribute} >= ? or #{attribute} IS NULL", from_date) unless from_date.nil?
-        scope = scope.where("#{attribute} <= ? or #{attribute} IS NULL", until_date) unless until_date.nil?
+        scope = scope.where("#{attribute} >= ?", from_date) unless from_date.nil?
+        scope = scope.where("#{attribute} <= ?", until_date) unless until_date.nil?
         scope
       end
 
