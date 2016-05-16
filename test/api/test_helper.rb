@@ -27,7 +27,7 @@ class ActiveSupport::TestCase
   USER_LOGIN = "testapi"
 
   def app
-    Noosfero::API::API
+    Api::App
   end
 
   def login_with_captcha
