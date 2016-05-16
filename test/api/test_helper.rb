@@ -69,7 +69,23 @@ class ActiveSupport::TestCase
     @params[:private_token] = @private_token
   end
 
+  def logout_api
+    @params.delete(:private_token)
+  end
+
   attr_accessor :private_token, :user, :person, :params, :environment
+
+  def create_base64_image
+    image_path = File.absolute_path(Rails.root + 'public/images/noosfero-network.png')
+    image_name = File.basename(image_path)
+    image_type = "image/#{File.extname(image_name).delete "."}"
+    encoded_base64_img = Base64.encode64(File.open(image_path) {|io| io.read })
+    base64_image = {}
+    base64_image[:tempfile] = encoded_base64_img
+    base64_image[:filename] = image_name
+    base64_image[:type] = image_type
+    base64_image
+  end
 
   private
 
