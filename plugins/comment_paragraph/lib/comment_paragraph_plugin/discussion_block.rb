@@ -2,12 +2,15 @@ class CommentParagraphPlugin::DiscussionBlock < Block
 
   settings_items :presentation_mode, :type => String, :default => 'title_only'
   settings_items :total_items, :type => Integer, :default => 5
-  settings_items :show_blog_picture, :type => :boolean, :default => false
   settings_items :discussion_status, :type => Integer
 
-  attr_accessible :presentation_mode, :total_items, :show_blog_picture, :discussion_status
+  attr_accessible :presentation_mode, :total_items, :discussion_status
 
   VALID_CONTENT = ['CommentParagraphPlugin::Discussion']
+
+  STATUS_NOT_OPENED = 0
+  STATUS_AVAILABLE = 1
+  STATUS_CLOSED = 2
 
   def self.description
     c_('Discussion Articles')
@@ -18,17 +21,18 @@ class CommentParagraphPlugin::DiscussionBlock < Block
   end
 
   def discussions
-#    start_date = nil
-#    end_date = nil
-#    case self.discussion_status.to_s
-#      when '0'
-#        start_date > Time.now
-#      when '2'
-#        end_date < Time.now
-#      else
-#        start_date < Time.now && end_date > Time.now
-#    end
-    holder.articles.where(type: VALID_CONTENT).order('created_at DESC').limit(self.total_items)
+    current_time = Time.now
+    discussions = holder.articles.where(type: VALID_CONTENT).order('start_date ASC, end_date DESC, created_at DESC').limit(self.total_items)
+    case discussion_status
+    when STATUS_NOT_OPENED
+      discussions = discussions.where("start_date > ?", current_time)
+    when STATUS_AVAILABLE
+      discussions = discussions.where("start_date is null or start_date <= ?", current_time)
+      discussions = discussions.where("end_date is null or end_date >= ?", current_time)
+    when STATUS_CLOSED
+      discussions = discussions.where("end_date < ?", current_time)
+    end
+    discussions
   end
 
   def holder
@@ -41,10 +45,15 @@ class CommentParagraphPlugin::DiscussionBlock < Block
     end
   end
 
-  include DatesHelper
-
   def mode?(attr)
     attr == self.presentation_mode
   end
 
+  def api_content
+    Api::Entities::ArticleBase.represent(self.discussions).as_json
+  end
+
+  def display_api_content_by_default?
+    false
+  end
 end
