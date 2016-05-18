@@ -290,10 +290,7 @@ ActiveRecord::Schema.define(version: 20160422163123) do
     t.string   "referrer"
     t.text     "settings"
     t.integer  "paragraph_id"
-<<<<<<< HEAD
-=======
     t.string   "paragraph_uuid"
->>>>>>> master
   end
 
   add_index "comments", ["paragraph_uuid"], name: "index_comments_on_paragraph_uuid", using: :btree
