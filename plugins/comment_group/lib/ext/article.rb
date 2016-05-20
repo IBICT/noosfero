@@ -3,7 +3,7 @@ require_dependency 'article'
 class Article
 
   has_many :group_comments, -> {
-    order('created_at asc').where('group_id IS NOT NULL')
+    order('created_at asc').where('comments.group_id IS NOT NULL')
   }, class_name: 'Comment', foreign_key: 'source_id', dependent: :destroy
 
   validate :not_empty_group_comments_removed
