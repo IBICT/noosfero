@@ -213,7 +213,7 @@ class ContentViewerController < ApplicationController
       end
 
       if @page.published && @page.uploaded_file?
-        redirect_to @page.public_filename
+        redirect_to "#{Noosfero.root}#{@page.public_filename}"
       else
         send_data data, @page.download_headers
       end
