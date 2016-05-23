@@ -346,7 +346,7 @@ module ApplicationHelper
   end
 
   def is_testing_theme
-    !controller.session[:theme].nil?
+    !controller.session[:user_theme].nil?
   end
 
   def theme_owner
@@ -595,8 +595,8 @@ module ApplicationHelper
     end
 
     if block
-      field_html ||= ''
-      field_html += capture(&block)
+      field_html ||= ''.html_safe
+      field_html   = [field_html, capture(&block)].safe_join
     end
 
     if controller.action_name == 'signup' || controller.action_name == 'new_community' || (controller.controller_name == "enterprise_registration" && controller.action_name == 'index') || (controller.controller_name == 'home' && controller.action_name == 'index' && user.nil?)
@@ -605,16 +605,14 @@ module ApplicationHelper
       end
     else
       if profile.active_fields.include?(name)
-        result = content_tag('div', field_html + profile_field_privacy_selector(profile, name), :class => 'field-with-privacy-selector')
+        result = content_tag :div, class: 'field-with-privacy-selector' do
+          [field_html, profile_field_privacy_selector(profile, name)].safe_join
+        end
       end
     end
 
     if is_required
       result = required(result)
-    end
-
-    if block
-      concat(result)
     end
 
     result
@@ -983,6 +981,7 @@ module ApplicationHelper
     values = {}
     values.merge!(task.information[:variables]) if task.information[:variables]
     values.merge!({:requestor => link_to(task.requestor.name, task.requestor.url)}) if task.requestor
+    values.merge!({:target => link_to(task.target.name, task.target.url)}) if (task.target && task.target.respond_to?(:url))
     values.merge!({:subject => content_tag('span', task.subject, :class=>'task_target')}) if task.subject
     values.merge!({:linked_subject => link_to(content_tag('span', task.linked_subject[:text], :class => 'task_target'), task.linked_subject[:url])}) if task.linked_subject
     (task.information[:message] % values).html_safe
