@@ -49,7 +49,7 @@
   </p>
 <% else %>
   <%= form_tag tasks_url(:action => 'close') do%>
-    <% button_bar(:class => 'task-actions') do %>
+    <%= button_bar(:class => 'task-actions') do %>
       <%# FiXME button(:edit, _('View my requests'), :action => 'list_requested') %>
       <%# FIXME button('menu-mail',  _('Send request'), :action => 'new') %>
       <%= submit_button :save, _("Apply!") %>
@@ -86,7 +86,7 @@
 
     <%= pagination_links(@tasks)%>
 
-    <% button_bar(:class => 'task-actions') do %>
+    <%= button_bar(:class => 'task-actions') do %>
       <%# FiXME button(:edit, _('View my requests'), :action => 'list_requested') %>
       <%# FIXME button('menu-mail',  _('Send request'), :action => 'new') %>
       <%= submit_button :save, _("Apply!") %>

@@ -1,10 +1,9 @@
 require_relative 'test_helper'
-require "base64"
-require 'noosfero/api/helpers'
+require 'base64'
 
-class APIHelpersTest < ActiveSupport::TestCase
+class Api::HelpersTest < ActiveSupport::TestCase
 
-  include Noosfero::API::APIHelpers
+  include Api::Helpers
 
   def setup
     create_and_activate_user
@@ -100,7 +99,7 @@ class APIHelpersTest < ActiveSupport::TestCase
   end
 
   should 'parse_content_type return all content types as an array' do
-    assert_equivalent ['TextArticle','TinyMceArticle'], parse_content_type("TextArticle,TinyMceArticle")
+    assert_equivalent ['TextileArticle','TinyMceArticle'], parse_content_type("TextileArticle,TinyMceArticle")
   end
 
   should 'find_article return article by id in list passed for user with permission' do
@@ -206,7 +205,7 @@ class APIHelpersTest < ActiveSupport::TestCase
   end
 
   should 'render not_found if endpoint is unavailable' do
-    Noosfero::API::API.stubs(:endpoint_unavailable?).returns(true)
+    Api::App.stubs(:endpoint_unavailable?).returns(true)
     self.expects(:not_found!)
 
     filter_disabled_plugins_endpoints
@@ -252,19 +251,11 @@ class APIHelpersTest < ActiveSupport::TestCase
     present_partial(model, {})
   end
 
-###### Captcha tests ######
+  should 'do not test captcha when there is no captcha plugin enabled' do
+    environment = Environment.new
+    assert verify_captcha("127.0.0.1", {}, environment)
+  end
 
- def plugins
-   environment = Environment.default
-   Noosfero::Plugin::Manager.new(environment, self)
- end
-
- should 'do not test captcha when there is no captcha plugin enabled' do
-   environment = Environment.new
-   assert verify_captcha("127.0.0.1", {}, environment)
- end
-
-###### END Captcha tests ######
   should 'create a :uploaded_data hash, expected by image_builder ' do
     base64_image = create_base64_image
     uploadedfile = base64_to_uploadedfile base64_image

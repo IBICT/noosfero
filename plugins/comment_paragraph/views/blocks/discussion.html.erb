@@ -25,7 +25,7 @@
      <% children.each do |item| %>
         <h2><%= link_to(item.title,item.url, :class => 'post-title')%></h2>
         <span class="post-date"><%= show_date(item.published_at, true)%></span>
-        <div class="headline"><%=item.body%></div>
+        <div class="headline"><%=item.body.html_safe %></div>
         <p class="highlighted-news-read-more"><%= link_to(_('Read more'), item.url) %></p>
     <% end %>
     </div>
