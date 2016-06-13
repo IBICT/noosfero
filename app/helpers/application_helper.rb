@@ -725,11 +725,11 @@ module ApplicationHelper
   def display_short_format(article, options={})
     options[:comments_link] ||= true
     options[:read_more_link] ||= true
+    lead_links = (options[:comments_link] ? link_to_comments(article) : '') + (options[:read_more_link] ? reference_to_article( _('Read more'), article) : '')
     html = content_tag('div',
              article.lead +
              content_tag('div',
-               (options[:comments_link] ? link_to_comments(article) : '') +
-               (options[:read_more_link] ? reference_to_article( _('Read more'), article) : ''),
+               lead_links.html_safe,
                :class => 'read-more'
              ),
              :class => 'short-post'
@@ -1132,7 +1132,7 @@ module ApplicationHelper
     content_tag(:div, :class => 'errorExplanation', :id => 'errorExplanation') do
       content_tag(:h2, _('Errors while saving')) +
       content_tag(:ul) do
-        safe_join(errors.map { |err| content_tag(:li, err) })
+        safe_join(errors.map { |err| content_tag(:li, err.html_safe) })
       end
     end
   end
