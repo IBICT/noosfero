@@ -2,7 +2,6 @@ require 'csv'
 
 module CommentParagraphPlugin::CommentsReport
 
-  #FIXME make this test
   def export_comments_csv(article)
     comments_map = article.comments.group_by { |comment| comment.paragraph_uuid }
     @export = []
