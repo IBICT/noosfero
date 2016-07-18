@@ -8,6 +8,13 @@ class Profile < ApplicationRecord
     :email_suggestions, :allow_members_to_invite, :invite_friends_only, :secret, :profile_admin_mail_notification,
     :custom_fields, :region, :region_id
 
+  extend ActsAsHavingSettings::ClassMethods
+  acts_as_having_settings field: :data
+
+  def settings
+    data
+  end
+
   # use for internationalizable human type names in search facets
   # reimplement on subclasses
   def self.type_name
@@ -117,6 +124,8 @@ class Profile < ApplicationRecord
   }
 
   acts_as_accessible
+
+  include Customizable
   acts_as_customizable
 
   include Noosfero::Plugin::HotSpot
@@ -214,6 +223,7 @@ class Profile < ApplicationRecord
     Person.members_of(self).by_role(roles)
   end
 
+  extend ActsAsHavingBoxes::ClassMethods
   acts_as_having_boxes
 
   acts_as_taggable
@@ -258,12 +268,6 @@ class Profile < ApplicationRecord
   def scraps(scrap=nil)
     scrap = scrap.is_a?(Scrap) ? scrap.id : scrap
     scrap.nil? ? Scrap.all_scraps(self) : Scrap.all_scraps(self).find(scrap)
-  end
-
-  acts_as_having_settings :field => :data
-
-  def settings
-    data
   end
 
   settings_items :redirect_l10n, :type => :boolean, :default => false
@@ -314,6 +318,7 @@ class Profile < ApplicationRecord
 
   has_many :files, :class_name => 'UploadedFile'
 
+  extend ActsAsHavingImage::ClassMethods
   acts_as_having_image
 
   has_many :tasks, :dependent => :destroy, :as => 'target'

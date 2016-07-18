@@ -11,7 +11,8 @@
 # will need to declare <ttserialize</tt> itself).
 class Task < ApplicationRecord
 
-  acts_as_having_settings :field => :data
+  extend ActsAsHavingSettings::ClassMethods
+  acts_as_having_settings field: :data
   acts_as_ordered_taggable
 
   module Status
