@@ -306,16 +306,6 @@ class Profile < ApplicationRecord
     scrap.nil? ? Scrap.all_scraps(self) : Scrap.all_scraps(self).find(scrap)
   end
 
-<<<<<<< HEAD
-  settings_items :redirect_l10n, :type => :boolean, :default => false
-  settings_items :public_content, :type => :boolean, :default => true
-  settings_items :description
-  settings_items :fields_privacy, :type => :hash, :default => {}
-  settings_items :email_suggestions, :type => :boolean, :default => false
-  settings_items :profile_admin_mail_notification, :type => :boolean, :default => true
-
-=======
->>>>>>> master
   validates_length_of :description, :maximum => 550, :allow_nil => true
 
   # Valid identifiers must match this format.
