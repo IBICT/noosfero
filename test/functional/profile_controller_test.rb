@@ -3,9 +3,10 @@ require 'profile_controller'
 
 class ProfileControllerTest < ActionController::TestCase
 
+  include MembershipsHelper
+
   self.default_params = {profile: 'testuser'}
   def setup
-    Environment.default.enable('products_for_enterprises')
     @profile = create_user('testuser').person
   end
   attr_reader :profile
@@ -16,6 +17,19 @@ class ProfileControllerTest < ActionController::TestCase
     assert_response :success
     assert_template 'friends'
     assert assigns(:friends)
+  end
+
+  should 'remove person from article followers when unfollow' do
+    profile = create_user('testuser').person
+    follower = create_user('follower').person
+    article = profile.articles.create(:name => 'test')
+    article.person_followers = [follower]
+    article.save
+    login_as('follower')
+    article.reload
+    assert_includes Article.find(article.id).person_followers, follower
+    post :unfollow_article, :article_id => article.id
+    assert_not_includes Article.find(article.id).person_followers, follower
   end
 
   should 'point to manage friends in user is seeing his own friends' do
@@ -112,7 +126,7 @@ class ProfileControllerTest < ActionController::TestCase
     @profile.articles.create!(:name => 'testarticle', :tag_list => 'tag1')
     get :content_tagged, :profile => @profile.identifier, :id => 'tag1'
 
-    assert_tag :tag => 'a', :attributes => { :href => '/tag/tag1' }, :content => 'See content tagged with "tag1" in the entire site'
+    assert_tag :tag => 'a', :attributes => { :href => '/tag/tag1' }, :content => 'See content tagged with "tag1" in the entire site'.html_safe
   end
 
   should 'show a link to own control panel' do
@@ -216,29 +230,6 @@ class ProfileControllerTest < ActionController::TestCase
     assert @profile.is_a_friend?(friend)
     get :index, :profile => friend.identifier
     assert_no_match /Add friend/, @response.body
-  end
-
-  should 'display "Products" link for enterprise' do
-    ent = fast_create(Enterprise, :name => 'my test enterprise', :identifier => 'my-test-enterprise', :enabled => false)
-    product = fast_create(Product, :profile_id => ent.id)
-
-    get :index, :profile => 'my-test-enterprise'
-    assert_tag :tag => 'a', :attributes => { :href => '/catalog/my-test-enterprise'}, :content => /Products\/Services/
-  end
-
-  should 'not display "Products" link for enterprise if environment do not let' do
-    env = Environment.default
-    env.disable('products_for_enterprises')
-    ent = fast_create(Enterprise, :name => 'my test enterprise', :identifier => 'my-test-enterprise', :enabled => false, :environment_id => env.id)
-
-    get :index, :profile => 'my-test-enterprise'
-    assert_no_tag :tag => 'a', :attributes => { :href => '/catalog/my-test-enterprise'}, :content => /Products\/Services/
-  end
-
-
-  should 'not display "Products" link for people' do
-    get :index, :profile => 'ze'
-    assert_no_tag :tag => 'a', :attributes => { :href => '/catalog/my-test-enterprise'}, :content => /Products\/Services/
   end
 
   should 'list top level articles in sitemap' do
@@ -395,6 +386,61 @@ class ProfileControllerTest < ActionController::TestCase
     assert_redirected_to :controller => 'account', :action => 'login'
   end
 
+  should 'show regular join button for person with public email' do
+    community = Community.create!(:name => 'my test community', :closed => true, :requires_email => true)
+    Person.any_instance.stubs(:public_fields).returns(["email"])
+    login_as(@profile.identifier)
+
+    get :index, :profile => community.identifier
+    assert_no_tag :tag => 'a', :attributes => { :class => /modal-toggle join-community/ }
+  end
+
+  should 'show join modal for person with private email' do
+    community = Community.create!(:name => 'my test community', :closed => true, :requires_email => true)
+    Person.any_instance.stubs(:public_fields).returns([])
+    login_as(@profile.identifier)
+
+    get :index, :profile => community.identifier
+    assert_tag :tag => 'a', :attributes => { :class => /modal-toggle join-community/ }
+  end
+
+  should 'show regular join button for community without email visibility requirement' do
+    community = Community.create!(:name => 'my test community', :closed => true, :requires_email => false)
+    Person.any_instance.stubs(:public_fields).returns([])
+    login_as(@profile.identifier)
+
+    get :index, :profile => community.identifier
+    assert_no_tag :tag => 'a', :attributes => { :class => /modal-toggle join-community/ }
+  end
+
+  should 'show regular join button for community without email visibility requirement and person with public email' do
+    community = Community.create!(:name => 'my test community', :closed => true, :requires_email => false)
+    Person.any_instance.stubs(:public_fields).returns(['email'])
+    login_as(@profile.identifier)
+
+    get :index, :profile => community.identifier
+    assert_no_tag :tag => 'a', :attributes => { :class => /modal-toggle join-community/ }
+  end
+
+  should 'render join modal for community with email visibility requirement and person with private email' do
+    community = Community.create!(:name => 'my test community', :closed => true, :requires_email => true)
+    login_as @profile.identifier
+    post :join, :profile => community.identifier
+    assert_template "join"
+  end
+
+  should 'create add member task from join-community modal' do
+    community = Community.create!(:name => 'my test community', :closed => true, :requires_email => true)
+    admin = create_user('community-admin').person
+    community.add_admin(admin)
+
+    login_as @profile.identifier
+    assert_difference 'AddMember.count' do
+      post :join_modal, :profile => community.identifier
+    end
+    assert_redirected_to :action => 'index'
+  end
+
   should 'actually leave profile' do
     community = fast_create(Community)
     admin = fast_create(Person)
@@ -499,7 +545,7 @@ class ProfileControllerTest < ActionController::TestCase
   should 'show description of orgarnization' do
     login_as(@profile.identifier)
     ent = fast_create(Enterprise)
-    ent.description = 'Enterprise\'s description'
+    ent.description = "<span>Enterprise's description</span>"
     ent.save
     get :index, :profile => ent.identifier
     assert_tag :tag => 'div', :attributes => { :class => 'public-profile-description' }, :content => /Enterprise\'s description/
@@ -725,12 +771,15 @@ class ProfileControllerTest < ActionController::TestCase
     assert_equal 15, assigns(:activities).size
   end
 
-  should 'not see the friends activities in the current profile' do
+  should 'not see the followers activities in the current profile' do
+    circle = Circle.create!(:person=> profile, :name => "Zombies", :profile_type => 'Person')
+
     p2 = create_user.person
-    refute profile.is_a_friend?(p2)
+    refute profile.follows?(p2)
     p3 = create_user.person
-    p3.add_friend(profile)
-    assert p3.is_a_friend?(profile)
+    profile.follow(p3, circle)
+    assert profile.follows?(p3)
+
     ActionTracker::Record.destroy_all
 
     scrap1 = create(Scrap, defaults_for_scrap(:sender => p2, :receiver => p3))
@@ -918,7 +967,11 @@ class ProfileControllerTest < ActionController::TestCase
   should 'have activities defined if logged in and is following profile' do
     login_as(profile.identifier)
     p1= fast_create(Person)
-    p1.add_friend(profile)
+
+    circle = Circle.create!(:person=> profile, :name => "Zombies", :profile_type => 'Person')
+
+    profile.follow(p1, circle)
+
     ActionTracker::Record.destroy_all
     get :index, :profile => p1.identifier
     assert_equal [], assigns(:activities)
@@ -1223,13 +1276,13 @@ class ProfileControllerTest < ActionController::TestCase
   should 'display plugins tabs' do
     class Plugin1 < Noosfero::Plugin
       def profile_tabs
-        {:title => 'Plugin1 tab', :id => 'plugin1_tab', :content => proc { 'Content from plugin1.' }}
+        {:title => 'Plugin1 tab', :id => 'plugin1_tab', :content => proc { 'Content from plugin1.'.html_safe }}
       end
     end
 
     class Plugin2 < Noosfero::Plugin
       def profile_tabs
-        {:title => 'Plugin2 tab', :id => 'plugin2_tab', :content => proc { 'Content from plugin2.' }}
+        {:title => 'Plugin2 tab', :id => 'plugin2_tab', :content => proc { 'Content from plugin2.'.html_safe }}
       end
     end
     Noosfero::Plugin.stubs(:all).returns([Plugin1.to_s, Plugin2.to_s])
@@ -1338,6 +1391,24 @@ class ProfileControllerTest < ActionController::TestCase
     assert_equivalent [scrap,activity], assigns(:activities).map(&:activity)
   end
 
+  should "follow an article" do
+    article = TinyMceArticle.create!(:profile => profile, :name => 'An article about free software')
+    login_as(@profile.identifier)
+    post :follow_article, :profile => profile.identifier, :article_id => article.id
+    assert_includes article.person_followers, @profile
+  end
+
+  should "unfollow an article" do
+    article = TinyMceArticle.create!(:profile => profile, :name => 'An article about free software')
+    article.person_followers << @profile
+    article.save!
+    assert_includes article.person_followers, @profile
+
+    login_as(@profile.identifier)
+    post :unfollow_article, :profile => profile.identifier, :article_id => article.id
+    assert_not_includes article.person_followers, @profile
+  end
+
   should "be logged in to leave comment on an activity" do
     article = TinyMceArticle.create!(:profile => profile, :name => 'An article about free software')
     activity = ActionTracker::Record.last
@@ -1434,9 +1505,39 @@ class ProfileControllerTest < ActionController::TestCase
     create_user_with_permission('profile_moderator_user', 'send_mail_to_members', community)
     login_as('profile_moderator_user')
     @controller.stubs(:locale).returns('pt')
+
     assert_difference 'Delayed::Job.count', 1 do
       post :send_mail, :profile => community.identifier, :mailing => {:subject => 'Hello', :body => 'We have some news'}
     end
+  end
+
+  should 'send to members_filtered if available' do
+    community = fast_create(Community)
+    create_user_with_permission('profile_moderator_user', 'send_mail_to_members', community)
+    person = create_user('Any').person
+    community.add_member(person)
+    community.save!
+    login_as('profile_moderator_user')
+
+    post :send_mail, :profile => community.identifier, :mailing => {:subject => 'Hello', :body => 'We have some news'}
+    assert_equivalent community.members, OrganizationMailing.last.recipients
+
+    @request.session[:members_filtered] = [person.id]
+    post :send_mail, :profile => community.identifier, :mailing => {:subject => 'RUN!!', :body => 'Run to the hills!!'}
+    assert_equal [person], OrganizationMailing.last.recipients
+  end
+
+  should 'send email to all members if there is no valid member in members_filtered' do
+    community = fast_create(Community)
+    create_user_with_permission('profile_moderator_user', 'send_mail_to_members', community)
+    person = create_user('Any').person
+    community.add_member(person)
+    community.save!
+    login_as('profile_moderator_user')
+
+    @request.session[:members_filtered] = [Profile.last.id+1]
+    post :send_mail, :profile => community.identifier, :mailing => {:subject => 'RUN!!', :body => 'Run to the hills!!'}
+    assert_empty OrganizationMailing.last.recipients
   end
 
   should 'save mailing' do
@@ -1485,7 +1586,7 @@ class ProfileControllerTest < ActionController::TestCase
     login_as('profile_moderator_user')
 
     get :send_mail, :profile => community.identifier, :mailing => {:subject => 'Hello', :body => 'We have some news'}
-    assert_select '.template-selection', 0
+    assert_select '.template-selection'
     assert assigns(:email_templates).empty?
   end
 
@@ -1836,6 +1937,112 @@ class ProfileControllerTest < ActionController::TestCase
     Environment.default.enable(:restrict_to_members)
     get :index
     assert_redirected_to :controller => 'account', :action => 'login'
+  end
+
+  should 'not follow a user without defining a circle' do
+    login_as(@profile.identifier)
+    person = fast_create(Person)
+    assert_no_difference 'ProfileFollower.count' do
+      post :follow, :profile => person.identifier, :circles => {}
+    end
+  end
+
+  should "not follow user if not logged" do
+    person = fast_create(Person)
+    get :follow, :profile => person.identifier
+
+    assert_redirected_to :controller => 'account', :action => 'login'
+  end
+
+  should 'follow a user with a circle' do
+    login_as(@profile.identifier)
+    person = fast_create(Person)
+
+    circle = Circle.create!(:person=> @profile, :name => "Zombies", :profile_type => 'Person')
+
+    assert_difference 'ProfileFollower.count' do
+      post :follow, :profile => person.identifier, :circles => {"Zombies" => circle.id}
+    end
+  end
+
+  should 'follow a user with more than one circle' do
+    login_as(@profile.identifier)
+    person = fast_create(Person)
+
+    circle = Circle.create!(:person=> @profile, :name => "Zombies", :profile_type => 'Person')
+    circle2 = Circle.create!(:person=> @profile, :name => "Brainsss", :profile_type => 'Person')
+
+    assert_difference 'ProfileFollower.count', 2 do
+      post :follow, :profile => person.identifier, :circles => {"Zombies" => circle.id, "Brainsss"=> circle2.id}
+    end
+  end
+
+  should 'not follow a user with no circle selected' do
+    login_as(@profile.identifier)
+    person = fast_create(Person)
+
+    circle = Circle.create!(:person=> @profile, :name => "Zombies", :profile_type => 'Person')
+    circle2 = Circle.create!(:person=> @profile, :name => "Brainsss", :profile_type => 'Person')
+
+    assert_no_difference 'ProfileFollower.count' do
+      post :follow, :profile => person.identifier, :circles => {"Zombies" => "0", "Brainsss" => "0"}
+    end
+
+    assert_match /Select at least one circle to follow/, response.body
+  end
+
+  should 'not follow if current_person already follows the person' do
+    login_as(@profile.identifier)
+    person = fast_create(Person)
+
+    circle = Circle.create!(:person=> @profile, :name => "Zombies", :profile_type => 'Person')
+    fast_create(ProfileFollower, :profile_id => person.id, :circle_id => circle.id)
+
+    assert_no_difference 'ProfileFollower.count' do
+      post :follow, :profile => person.identifier, :follow => { :circles => {"Zombies" => circle.id} }
+    end
+    assert_response 400
+  end
+
+  should "not unfollow user if not logged" do
+    person = fast_create(Person)
+    post :unfollow, :profile => person.identifier
+
+    assert_redirected_to :controller => 'account', :action => 'login'
+  end
+
+  should "unfollow a followed person" do
+    login_as(@profile.identifier)
+    person = fast_create(Person)
+
+    circle = Circle.create!(:person=> @profile, :name => "Zombies", :profile_type => 'Person')
+    follower = fast_create(ProfileFollower, :profile_id => person.id, :circle_id => circle.id)
+
+    assert_not_nil follower
+
+    post :unfollow, :profile => person.identifier
+    follower = ProfileFollower.find_by(:profile_id => person.id, :circle_id => circle.id)
+    assert_nil follower
+  end
+
+  should "not unfollow a not followed person" do
+    login_as(@profile.identifier)
+    person = fast_create(Person)
+
+    assert_no_difference 'ProfileFollower.count' do
+      post :unfollow, :profile => person.identifier
+    end
+  end
+
+  should "redirect to page after unfollow" do
+    login_as(@profile.identifier)
+    person = fast_create(Person)
+
+    circle = Circle.create!(:person=> @profile, :name => "Zombies", :profile_type => 'Person')
+    fast_create(ProfileFollower, :profile_id => person.id, :circle_id => circle.id)
+
+    post :unfollow, :profile => person.identifier, :redirect_to => "/some/url"
+    assert_redirected_to "/some/url"
   end
 
 end

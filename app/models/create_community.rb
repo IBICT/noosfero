@@ -12,6 +12,7 @@ class CreateCommunity < Task
   attr_accessible :environment, :requestor, :target
   attr_accessible :reject_explanation, :template_id
 
+  extend ActsAsHavingImage::ClassMethods
   acts_as_having_image
 
   DATA_FIELDS = Community.fields + ['name', 'closed', 'description']
@@ -19,6 +20,9 @@ class CreateCommunity < Task
     settings_items field.to_sym
     attr_accessible field.to_sym
   end
+
+  settings_items :custom_values
+  attr_accessible :custom_values
 
   def validate
     self.environment.required_community_fields.each do |field|
@@ -36,6 +40,7 @@ class CreateCommunity < Task
 
     community.update(community_data)
     community.image = image if image
+    community.custom_values = custom_values
     community.environment = self.environment
     community.save!
     community.add_admin(self.requestor)
@@ -56,11 +61,19 @@ class CreateCommunity < Task
 
   def information
     if description.blank?
-      { :message => _('%{requestor} wants to create community %{subject} with no description.') }
+      { :message => _('%{requestor} wants to create community %{subject} with no description.').html_safe }
     else
-      { :message => _('%{requestor} wants to create community %{subject} with this description:<p><em>%{description}</em></p>'),
+      { :message => _('%{requestor} wants to create community %{subject} with this description:<p><em>%{description}</em></p>').html_safe,
         :variables => {:description => description} }
     end
+  end
+
+  def reject_details
+    true
+  end
+
+  def custom_fields_moderate
+    true
   end
 
   # tells if this request was rejected

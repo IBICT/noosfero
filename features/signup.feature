@@ -16,6 +16,7 @@ Feature: signup
       | Full name             | José da Silva         |
     And wait for the captcha signup time
     And I press "Create my account"
+    And there are no pending jobs
     Then I should receive an e-mail on josesilva@example.com
     When I go to login page
     And I fill in "Username" with "josesilva"
@@ -251,7 +252,7 @@ Feature: signup
     And I press "Apply!"
     And I follow "Logout"
     And Teste da Silva's account is activated
-    And I follow "Login"
+    When I go to login page
     And I fill in "Username / Email" with "teste"
     And I fill in "Password" with "123456"
     And I press "Log in"

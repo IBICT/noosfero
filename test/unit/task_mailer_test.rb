@@ -135,14 +135,9 @@ class TaskMailerTest < ActiveSupport::TestCase
     requestor = Profile.new(:name => 'my name')
     requestor.expects(:notification_emails).returns(['requestor@example.com']).at_least_once
 
-    environment = Environment.default
-    environment.expects(:noreply_email).returns('sender@example.com')
-    environment.expects(:default_hostname).returns('example.com').at_least_once
-    environment.expects(:name).returns('example').at_least_once
-
     task.expects(:requestor).returns(requestor).at_least_once
-    requestor.expects(:environment).returns(environment).at_least_once
-    task.expects(:environment).returns(environment).at_least_once
+    requestor.expects(:environment).returns(@environment).at_least_once
+    task.expects(:environment).returns(@environment).at_least_once
 
     task.send(:send_notification, :cancelled).deliver
     assert !ActionMailer::Base.deliveries.empty?
@@ -163,14 +158,9 @@ class TaskMailerTest < ActiveSupport::TestCase
     requestor = Profile.new(:name => 'my name')
     requestor.expects(:notification_emails).returns(['requestor@example.com']).at_least_once
 
-    environment = Environment.default
-    environment.expects(:noreply_email).returns('sender@example.com')
-    environment.expects(:default_hostname).returns('example.com').at_least_once
-    environment.expects(:name).returns('example').at_least_once
-
     task.expects(:requestor).returns(requestor).at_least_once
-    requestor.expects(:environment).returns(environment).at_least_once
-    task.expects(:environment).returns(environment).at_least_once
+    requestor.expects(:environment).returns(@environment).at_least_once
+    task.expects(:environment).returns(@environment).at_least_once
 
     task.send(:send_notification, :finished).deliver
     assert !ActionMailer::Base.deliveries.empty?

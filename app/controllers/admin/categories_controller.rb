@@ -7,7 +7,6 @@ class CategoriesController < AdminController
   def index
     @categories = environment.categories.where("parent_id is null AND type is null")
     @regions = environment.regions.where(:parent_id => nil)
-    @product_categories = environment.product_categories.where(:parent_id => nil)
   end
 
   def get_children
@@ -45,7 +44,7 @@ class CategoriesController < AdminController
       if request.post?
         @category.update!(params[:category])
         @saved = true
-        session[:notice] = _("Category %s saved." % @category.name)
+        session[:notice] = _("Category %s saved." % @category.name).html_safe
         redirect_to :action => 'index'
       end
     rescue Exception => e

@@ -1,6 +1,6 @@
 require 'csv'
 
-class NewsletterPlugin::Newsletter < ActiveRecord::Base
+class NewsletterPlugin::Newsletter < ApplicationRecord
 
   belongs_to :environment
   belongs_to :person
@@ -11,7 +11,7 @@ class NewsletterPlugin::Newsletter < ActiveRecord::Base
 
   attr_accessible :environment, :enabled, :periodicity, :subject, :posts_per_blog, :footer, :blog_ids, :additional_recipients, :person, :person_id, :moderated
 
-  scope :enabled, :conditions => { :enabled => true }
+  scope :enabled, -> { where enabled: true }
 
   # These methods are used by NewsletterMailing
   def people
@@ -19,10 +19,9 @@ class NewsletterPlugin::Newsletter < ActiveRecord::Base
     if list.empty?
       environment.people
     else
-      environment.people.all(
-        :joins => "LEFT OUTER JOIN users ON (users.id = profiles.user_id)",
-        :conditions => "users.email NOT IN (#{list})"
-      )
+      environment.people
+        .joins('LEFT OUTER JOIN users ON (users.id = profiles.user_id)')
+        .where("users.email NOT IN (#{list})")
     end
   end
 
@@ -51,7 +50,7 @@ class NewsletterPlugin::Newsletter < ActiveRecord::Base
 
   validates_each :blog_ids do |record, attr, value|
     if record.environment
-      unless value.delete_if(&:zero?).select { |id| !Blog.find_by_id(id) || Blog.find(id).environment != record.environment }.empty?
+      unless value.delete_if(&:zero?).select { |id| !Blog.find_by(id: id) || Blog.find(id).environment != record.environment }.empty?
         record.errors.add(attr, _('must be valid'))
       end
     end
@@ -82,9 +81,9 @@ class NewsletterPlugin::Newsletter < ActiveRecord::Base
   def posts(data = {})
     limit = self.posts_per_blog.zero? ? nil : self.posts_per_blog
     posts = if self.last_send_at.nil?
-      self.blogs.map{|blog| blog.posts.all(:limit => limit)}.flatten
+      self.blogs.flat_map{ |blog| blog.posts.limit limit }
     else
-      self.blogs.map{|blog| blog.posts.where("published_at >= :last_send_at", {last_send_at: self.last_send_at}).all(:limit => limit)}.flatten
+      self.blogs.flat_map{ |blog| blog.posts.where("published_at >= :last_send_at", {last_send_at: self.last_send_at}).limit limit }
     end
     data[:post_ids].nil? ? posts : posts.select{|post| data[:post_ids].include?(post.id.to_s)}
   end
@@ -111,11 +110,11 @@ class NewsletterPlugin::Newsletter < ActiveRecord::Base
   include DatesHelper
 
   def message_to_public_link
-    content_tag(:p, _("If you can't view this email, %s.") % link_to(_('click here'), '{mailing_url}'), :id => 'newsletter-public-link')
+    content_tag(:p, (_("If you can't view this email, %s.") % link_to(_('click here'), '{mailing_url}')).html_safe, :id => 'newsletter-public-link').html_safe
   end
 
   def message_to_unsubscribe
-    content_tag(:div, _("This is an automatically generated email, please do not reply. If you do not wish to receive future newsletter emails, %s.") % link_to(_("cancel your subscription here"), self.unsubscribe_url, :style => CSS['public-link']), :style => CSS['newsletter-unsubscribe'], :id => 'newsletter-unsubscribe')
+    content_tag(:div, _("This is an automatically generated email, please do not reply. If you do not wish to receive future newsletter emails, %s.").html_safe % link_to(_("cancel your subscription here"), self.unsubscribe_url, :style => CSS['public-link']), :style => CSS['newsletter-unsubscribe'], :id => 'newsletter-unsubscribe').html_safe
   end
 
   def read_more(link_address)
@@ -131,13 +130,13 @@ class NewsletterPlugin::Newsletter < ActiveRecord::Base
   end
 
   def body(data = {})
-    content_tag(:div, content_tag(:div, message_to_public_link, :style => CSS['newsletter-public-link'])+content_tag(:table,(self.image.nil? ? '' : content_tag(:tr, content_tag(:th, tag(:img, :src => "#{self.environment.top_url}#{self.image.public_filename}", :style => CSS['header-image']),:colspan => 2),:style => CSS['newsletter-header']))+self.posts(data).map do |post|
+    content_tag(:div, content_tag(:div, message_to_public_link, :style => CSS['newsletter-public-link']).html_safe+content_tag(:table,(self.image.nil? ? '' : content_tag(:tr, content_tag(:th, tag(:img, :src => "#{self.environment.top_url}#{self.image.public_filename}", :style => CSS['header-image']),:colspan => 2),:style => CSS['newsletter-header'])).html_safe+self.posts(data).map do |post|
         if post.image
           post_with_image(post)
         else
           post_without_image(post)
         end
-      end.join()+content_tag(:tr, content_tag(:td, self.footer, :colspan => 2)),:style => CSS['breakingnews'])+content_tag(:div,message_to_unsubscribe, :style => CSS['newsletter-unsubscribe']),:style => CSS['breakingnews-wrap'])
+      end.join().html_safe+content_tag(:tr, content_tag(:td, self.footer, :colspan => 2)),:style => CSS['breakingnews']).html_safe+content_tag(:div,message_to_unsubscribe, :style => CSS['newsletter-unsubscribe']),:style => CSS['breakingnews-wrap']).html_safe
   end
 
   def default_subject
@@ -168,12 +167,11 @@ class NewsletterPlugin::Newsletter < ActiveRecord::Base
     end
   end
 
+  extend ActsAsHavingImage::ClassMethods
   acts_as_having_image
 
   def last_send_at
-    last_mailing = NewsletterPlugin::NewsletterMailing.last(
-      :conditions => {:source_id => self.id}
-    )
+    last_mailing = NewsletterPlugin::NewsletterMailing.where(source_id: self.id).last
     last_mailing.nil? ? nil : last_mailing.created_at
   end
 

@@ -12,11 +12,20 @@ class RawHTMLBlock < Block
 
   attr_accessible :html
 
-  def content(args={})
-    (title.blank? ? '' : block_title(title)).html_safe + html.to_s.html_safe
-  end
-
   def has_macro?
     true
   end
+
+  def editable?(user)
+    user.has_permission?('edit_raw_html_block', environment)
+  end
+
+  def api_content
+    { html: html }
+  end
+
+  def display_api_content_by_default?
+    true
+  end
+
 end

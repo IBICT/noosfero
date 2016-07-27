@@ -1,4 +1,5 @@
-# encoding: utf-8
+require_relative 'noosfero/version'
+require_relative 'noosfero/constants'
 
 module Noosfero
 
@@ -67,7 +68,7 @@ module Noosfero
   end
 
   def self.identifier_format
-    '(?!index)[a-z0-9][a-z0-9~.]*([_\-][a-z0-9~.]+)*'
+    '(?!index)[a-z0-9][a-z0-9~.*]*([_\-][a-z0-9~.*]+)*'
   end
 
   # All valid identifiers, plus ~ meaning "the current user". See
@@ -106,6 +107,3 @@ module Noosfero
 
 end
 
-require 'noosfero/version'
-require 'noosfero/constants'
-require 'noosfero/core_ext'

@@ -16,7 +16,7 @@ module WorkAssignmentPlugin::Helper
   end
 
   def display_author_folder(author_folder, user)
-    return if author_folder.children.empty?
+    return if author_folder.children(true).empty?
     content_tag('tr',
       content_tag('td', link_to_last_submission(author_folder, user)) +
       content_tag('td', time_format(author_folder.children.last.created_at)) +
@@ -73,7 +73,7 @@ module WorkAssignmentPlugin::Helper
   end
 
   def display_privacy_button(author_folder, user)
-    folder = environment.articles.find_by_id(author_folder.id)
+    folder = environment.articles.find_by id: author_folder.id
     work_assignment = folder.parent
     @back_to = url_for(work_assignment.url)
 

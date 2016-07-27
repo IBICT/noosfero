@@ -4,8 +4,7 @@ class MailconfControllerTest < ActionController::TestCase
 
   def setup
     @controller = MailconfController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
+
     User.destroy_all
     @user = create_user('ze')
 
@@ -71,8 +70,10 @@ class MailconfControllerTest < ActionController::TestCase
     env = Environment.default
     env.force_www = true
     env.save!
+    env.domains.delete_all
+    env.domains.create! name: 'example.com'
     get :index, :profile => 'ze'
-    assert_tag :tag => 'li', :content => /ze@colivre.net/
+    assert_tag :tag => 'li', :content => /ze@example.com/
   end
 
   should 'not display www in email address when force_www=false' do
@@ -80,8 +81,10 @@ class MailconfControllerTest < ActionController::TestCase
     env = Environment.default
     env.force_www = false
     env.save!
+    env.domains.delete_all
+    env.domains.create! name: 'example.com'
     get :index, :profile => 'ze'
-    assert_tag :tag => 'li', :content => /ze@colivre.net/
+    assert_tag :tag => 'li', :content => /ze@example.com/
   end
 
   should 'create task to environment admin when enable email' do

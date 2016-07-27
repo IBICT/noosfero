@@ -52,7 +52,6 @@ class SearchController < PublicController
     [
       [ :people, _('People'), :recent_people ],
       [ :enterprises, _('Enterprises'), :recent_enterprises ],
-      [ :products, _('Products'), :recent_products ],
       [ :events, _('Upcoming events'), :upcoming_events ],
       [ :communities, _('Communities'), :recent_communities ],
       [ :articles, _('Contents'), :recent_articles ]
@@ -78,14 +77,15 @@ class SearchController < PublicController
     full_text_search
   end
 
-  def products
-    @scope = @environment.products
-    full_text_search
-  end
-
   def enterprises
     @scope = visible_profiles(Enterprise)
     full_text_search
+  end
+
+  # keep URL compatibility
+  def products
+    return render_not_found unless defined? ProductsPlugin
+    redirect_to url_for(params.merge controller: 'products_plugin/search', action: :products)
   end
 
   def communities
@@ -171,7 +171,7 @@ class SearchController < PublicController
       render_not_found if params[:action] == 'category_index'
     else
       path = params[:category_path]
-      @category = environment.categories.find_by_path(path)
+      @category = environment.categories.find_by path: path
       if @category.nil?
         render_not_found(path)
       else
@@ -181,14 +181,13 @@ class SearchController < PublicController
   end
 
   def available_searches
-    @available_searches ||= ActiveSupport::OrderedHash[
-      :articles, _('Contents'),
-      :people, _('People'),
-      :communities, _('Communities'),
-      :enterprises, _('Enterprises'),
-      :products, _('Products and Services'),
-      :events, _('Events'),
-    ]
+    @available_searches ||= {
+      articles:    _('Contents'),
+      people:      _('People'),
+      communities: _('Communities'),
+      enterprises: _('Enterprises'),
+      events:      _('Events'),
+    }
   end
 
   def load_search_assets
@@ -248,7 +247,11 @@ class SearchController < PublicController
   def visible_profiles(klass, *extra_relations)
     relations = [:image, :domains, :environment, :preferred_domain]
     relations += extra_relations
-    @environment.send(klass.name.underscore.pluralize).visible.includes(relations)
+    if current_user && current_user.person.is_admin?
+      @environment.send(klass.name.underscore.pluralize).includes(relations)
+    else
+      @environment.send(klass.name.underscore.pluralize).visible.includes(relations)
+    end
   end
 
   def per_page
@@ -256,13 +259,12 @@ class SearchController < PublicController
   end
 
   def available_assets
-    assets = ActiveSupport::OrderedHash[
-      :articles, _('Contents'),
-      :enterprises, _('Enterprises'),
-      :people, _('People'),
-      :communities, _('Communities'),
-      :products, _('Products and Services'),
-    ]
+    {
+      articles:    _('Contents'),
+      enterprises: _('Enterprises'),
+      people:      _('People'),
+      communities: _('Communities'),
+    }
   end
 
 end

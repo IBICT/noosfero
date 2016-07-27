@@ -5,8 +5,6 @@ class UsersControllerTest < ActionController::TestCase
 
   def setup
     @controller = UsersController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
 
     @environment = Environment.default
 
@@ -139,6 +137,38 @@ class UsersControllerTest < ActionController::TestCase
       post :destroy_user, :id => 99999
     end
     assert_redirected_to :action => 'index'
+  end
+
+  should 'redirect to index after send email with success' do
+    post :send_mail, mailing: { subject: "Subject", body: "Body" }, recipients: { profile_admins: "false", env_admins: "false" }
+    assert_redirected_to :action => 'index'
+    assert_match /The e-mails are being sent/, session[:notice]
+  end
+
+  should 'mailing recipients_roles should be empty when none is set' do
+    post :send_mail, mailing: { subject: "Subject", body: "Body" }, recipients: { profile_admins: "false", env_admins: "false" }
+    mailing = EnvironmentMailing.last
+    assert_equal mailing.recipients_roles, []
+  end
+
+  should 'mailing recipients_roles should be set correctly' do
+    post :send_mail, mailing: { subject: "Subject", body: "Body" }, recipients: { profile_admins: "true", env_admins: "true" }
+    mailing = EnvironmentMailing.last
+    assert_equal mailing.recipients_roles, ["profile_admin", "environment_administrator"]
+  end
+
+  should 'send mail to admins recipients' do
+    admin_user = create_user('new_admin').person
+    admin_user_2 = create_user('new_admin_2').person
+
+    environment.add_admin admin_user
+    environment.add_admin admin_user_2
+
+    assert_equal 2, environment.admins.count
+    assert_difference "MailingSent.count", 2 do
+      post :send_mail, mailing: { subject: "UnB", body: "Hail UnB" }, recipients: { profile_admins: "false", env_admins: "true" }
+      process_delayed_job_queue
+    end
   end
 
 end

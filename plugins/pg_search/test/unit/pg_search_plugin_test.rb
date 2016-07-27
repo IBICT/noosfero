@@ -25,7 +25,8 @@ class PgSearchPluginTest < ActiveSupport::TestCase
     profile1 = fast_create(Profile, :identifier => 'profile1', :name => 'debugger')
     profile2 = fast_create(Profile, :identifier => 'profile2', :name => 'profile admin debugger')
     profile3 = fast_create(Profile, :identifier => 'profile3', :name => 'admin debugger')
-    assert_equal [profile2, profile3, profile1], search(Profile, 'profile admin deb')
+    profile4 = fast_create(Profile, :identifier => 'profile4', :name => 'simple user')
+    assert_equal [profile2, profile3, profile1, profile4], search(Profile, 'profile admin deb')
   end
 
   should 'locate profile escaping special characters' do

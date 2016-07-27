@@ -5,24 +5,28 @@ notifications:
     template:
       - "%{repository_slug} %{branch} %{commit} %{commit_subject} - %{result} %{build_url}"
 
+# Ensure Container-based environment, as others can have some random failures
+# specially with different Firefox versions and selenium tests.
+# E.g. https://travis-ci.org/noosfero/noosfero/jobs/122918772#L1308
+#
+# Also container-based environments have the fatest boot times and
+# are the only one with cache available for public projects.
+# See https://docs.travis-ci.com/user/ci-environment/#Virtualization-environments
+sudo: false
+cache: bundler
+
 language: ruby
 rvm:
-  - 2.2.3
+  - 2.3.1
 
-sudo: false
 addons:
   apt:
     packages:
-      - po4a
-      - iso-codes
       - tango-icon-theme
       - pidgin-data
-      # for gem extensions
-      - libmagickwand-dev
-      - libpq-dev
-      - libreadline-dev
-      - libsqlite3-dev
-      - libxslt1-dev
+  artifacts:
+    paths:
+      - $(ls tmp/artifact* | tr "\n" ":")
 
 git:
   submodules: false
@@ -34,25 +38,49 @@ before_install:
   - gem install bundler
   - sed -i 's/softwarepublico.gov.br\/gitlab/github.com/' .gitmodules
   - git submodule update --init --recursive
-cache: bundler
+#cache: bundler
 
 before_script:
-  - mkdir -p tmp/{pids,cache} log
+  - mkdir -p tmp/{pids,cache} log cache
   - script/noosfero-plugins disableall
   #- bundle exec rake makemo &>/dev/null
 # database
   - cp config/database.yml.travis config/database.yml
   - psql -c 'create database myapp_test;' -U postgres
-  - bundle exec rake db:schema:load &>/dev/null
+  - bundle exec rake db:schema:load
   - bundle exec rake db:migrate &>/dev/null
 
 env:
-  - TASK=test:units
-  - TASK=test:functionals
-  - TASK=test:integration
-  - TASK=cucumber LANG=en
-  - TASK=selenium
-  - TASK=test:noosfero_plugins BUNDLE_OPTS=install
+  global:
+    - LANG=en
+  matrix:
+    - TASK=test:api
+    - TASK=test:units
+    - TASK=test:functionals
+    - TASK=test:integration
+    - SLICE=1/2 TASK=cucumber
+    - SLICE=2/2 TASK=cucumber
+    - SLICE=1/4 TASK=selenium
+    - SLICE=2/4 TASK=selenium
+    - SLICE=3/4 TASK=selenium
+    - SLICE=4/4 TASK=selenium
+    - SLICE=1/5 TASK=test:noosfero_plugins NOOSFERO_BUNDLE_OPTS=install
+    - SLICE=2/5 TASK=test:noosfero_plugins NOOSFERO_BUNDLE_OPTS=install
+    - SLICE=3/5 TASK=test:noosfero_plugins NOOSFERO_BUNDLE_OPTS=install
+    - SLICE=4/5 TASK=test:noosfero_plugins NOOSFERO_BUNDLE_OPTS=install
+    - SLICE=5/5 TASK=test:noosfero_plugins NOOSFERO_BUNDLE_OPTS=install
+    # chrome hanging on travis
+    #- SLICE=1/4 TASK=selenium SELENIUM_DRIVER=chrome
+    #- SLICE=2/4 TASK=selenium SELENIUM_DRIVER=chrome
+    #- SLICE=3/4 TASK=selenium SELENIUM_DRIVER=chrome
+    #- SLICE=4/4 TASK=selenium SELENIUM_DRIVER=chrome
+
+matrix:
+  allow_failures:
+    - env: SLICE=1/4 TASK=selenium SELENIUM_DRIVER=chrome
+    - env: SLICE=2/4 TASK=selenium SELENIUM_DRIVER=chrome
+    - env: SLICE=3/4 TASK=selenium SELENIUM_DRIVER=chrome
+    - env: SLICE=4/4 TASK=selenium SELENIUM_DRIVER=chrome
 
 script:
   - ./script/ci

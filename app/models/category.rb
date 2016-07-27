@@ -1,4 +1,4 @@
-class Category < ActiveRecord::Base
+class Category < ApplicationRecord
 
   attr_accessible :name, :parent_id, :display_color, :display_in_menu, :image_builder, :environment, :parent
 
@@ -21,6 +21,7 @@ class Category < ActiveRecord::Base
 
   scope :on_level, -> parent { where :parent_id => parent }
 
+  extend ActsAsFilesystem::ActsMethods
   acts_as_filesystem
 
   has_many :article_categorizations
@@ -35,8 +36,7 @@ class Category < ActiveRecord::Base
   has_many :people, :through => :profile_categorizations, :source => :profile, :class_name => 'Person'
   has_many :communities, :through => :profile_categorizations, :source => :profile, :class_name => 'Community'
 
-  has_many :products, :through => :enterprises
-
+  extend ActsAsHavingImage::ClassMethods
   acts_as_having_image
 
   before_save :normalize_display_color
@@ -64,10 +64,6 @@ class Category < ActiveRecord::Base
     self.communities.reorder('created_at DESC, id DESC').paginate(page: 1, per_page: limit)
   end
 
-  def recent_products(limit = 10)
-    self.products.reorder('created_at DESC, id DESC').paginate(page: 1, per_page: limit)
-  end
-
   def recent_articles(limit = 10)
     self.articles.recent(limit)
   end
@@ -90,7 +86,7 @@ class Category < ActiveRecord::Base
 
   def children_for_menu
     results = []
-    pending = children.where(display_in_menu: true).all
+    pending = children.where(display_in_menu: true).to_a
     while pending.present?
       cat = pending.shift
       results << cat

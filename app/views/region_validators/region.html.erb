@@ -5,7 +5,7 @@
 <ul>
   <% for validator in @region.validators %>
     <li>
-    <%= link_to_homepage validator.name, validator.identifier %>
+    <%= link_to_homepage validator.name, validator %>
     <%= link_to _('Remove validation rights'), { :action => 'remove', :id => @region.id, :validator_id => validator }, :method => 'post' %>
     </li>
   <% end %>
@@ -19,7 +19,7 @@
 
 <%= form_tag({}, { :method => 'get' }) do %>
   <%= text_field_tag :search, nil, :id => 'search_validator' %>
-  <% button_bar do %>
+  <%= button_bar do %>
     <%= submit_button('search', _('Search')) %>
   <% end %>
 <% end %>

@@ -20,7 +20,7 @@ class SubOrganizationsPlugin < Noosfero::Plugin
 
   def control_panel_buttons
     if context.profile.organization? && Organization.parents(context.profile).blank?
-      { :title => _('Manage sub-groups'), :icon => 'groups', :url => {:controller => 'sub_organizations_plugin_myprofile'} }
+      { title: _('Manage sub-groups'), icon: 'groups', url: {profile: profile.identifier, controller: :sub_organizations_plugin_myprofile} }
     end
   end
 
@@ -56,7 +56,7 @@ class SubOrganizationsPlugin < Noosfero::Plugin
   end
 
   def self.limit(organizations)
-    organizations.all(:limit => DISPLAY_LIMIT, :order => 'updated_at DESC').sort_by{ rand }
+    organizations.limit(DISPLAY_LIMIT).order('updated_at DESC').sort_by{ rand }
   end
 
   def self.extra_blocks

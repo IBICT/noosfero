@@ -22,6 +22,7 @@ public/thumbnails
 public/user_themes
 public/designs/themes/default
 public/designs/icons/default
+cache
 
 public/assets
 .sass-cache

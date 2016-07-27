@@ -32,7 +32,7 @@ class TrackTest < ActiveSupport::TestCase
     comment = create(Comment, :source => article, :author_id => owner.id)
     @step2 = CommunityTrackPlugin::Step.create!(:parent => @track, :start_date => DateTime.now, :end_date => DateTime.now, :name => 'step2', :profile => @profile)
     @step2.tool_type = 'Forum'
-    forum = fast_create(Forum, :parent_id => @step2.id)
+    forum = fast_create(Forum, :parent_id => @step2.id, :profile_id => owner.id)
     article_forum = create(Article, :name => 'article_forum', :parent_id => forum.id, :profile_id => owner.id)
     forum.children << article_forum
     forum_comment = create(Comment, :source => article_forum, :author_id => owner.id)
@@ -58,6 +58,13 @@ class TrackTest < ActiveSupport::TestCase
     category2 = fast_create(Category, :name => 'category2', :parent_id => category1.id )
     @track.categories.delete_all
     @track.add_category(category2, true)
+    assert_equal 'top category', @track.category_name
+  end
+
+  should 'return name of the top category when has no subcategory' do
+    top = create(Category, :name => 'top category', :environment => Environment.default)
+    @track.categories.delete_all
+    @track.add_category(top, true)
     assert_equal 'top category', @track.category_name
   end
 

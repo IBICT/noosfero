@@ -2,13 +2,14 @@ class Community < Organization
 
   attr_accessible :accessor_id, :accessor_type, :role_id, :resource_id, :resource_type
   attr_accessible :address_reference, :district, :tag_list, :language, :description
+
   after_destroy :check_invite_member_for_destroy
 
   def self.type_name
     _('Community')
   end
 
-  N_('Community')
+  N_('community')
   N_('Language')
 
   settings_items :language
@@ -33,7 +34,7 @@ class Community < Organization
     community = Community.new(attributes)
     community.environment = environment
     if community.environment.enabled?('admin_must_approve_new_communities')
-      CreateCommunity.create!(attributes.merge(:requestor => requestor, :environment => environment).except(:custom_values))
+      CreateCommunity.create!(attributes.merge(:requestor => requestor, :environment => environment))
     else
       community.save!
       community.add_admin(requestor)
@@ -77,7 +78,7 @@ class Community < Organization
   end
 
   def each_member(offset=0)
-    while member = self.members.first(:order => :id, :offset => offset)
+    while member = self.members.order(:id).offset(offset).first
       yield member
       offset = offset + 1
     end

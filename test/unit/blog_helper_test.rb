@@ -43,7 +43,8 @@ class BlogHelperTest < ActionView::TestCase
       "<#{tag}#{options.map{|k,v| " #{k}=\"#{[v].flatten.join(' ')}\""}.join}>#{content}</#{tag}>"
     end
 
-    html = Nokogiri::HTML list_posts(blog.posts)
+    html = Nokogiri::HTML list_posts(blog.posts).html_safe
+
     assert_select html, "div#post-#{newer_post.id}.blog-post.position-1.first.odd-post" +
                         " > div.odd-post-inner.blog-post-inner > .title", 'Last post'
     assert_select html, "div#post-#{hidden_post.id}.blog-post.position-2.not-published.even-post" +
@@ -101,11 +102,9 @@ class BlogHelperTest < ActionView::TestCase
 
   should 'display link to file if post is an uploaded_file' do
     file = create(UploadedFile, :uploaded_data => fixture_file_upload('/files/test.txt', 'text/plain'), :profile => profile, :published => true, :parent => blog)
-
     result = display_post(file)
-    assert_tag_in_string result, :tag => 'a',
-                                 :attributes => { :href => file.public_filename },
-                                 :content => _('Download')
+
+    assert_tag_in_string result, :tag => 'a', :content => _('Download')
   end
 
   should 'display image if post is an image' do

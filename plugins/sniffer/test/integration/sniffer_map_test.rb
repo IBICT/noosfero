@@ -1,4 +1,4 @@
-require 'test_helper'
+require_relative '../test_helper'
 
 class SnifferMapTest < ActionDispatch::IntegrationTest
 
@@ -22,7 +22,7 @@ class SnifferMapTest < ActionDispatch::IntegrationTest
     end
     # Create 2 products to each enterprise with its own category:
     8.times do |i| n = (i+=1).to_s
-      @c[i] = fast_create(ProductCategory, :name => 'Category'+n)
+      @c[i] = create(ProductCategory, :name => 'Category'+n)
       @p[i] = fast_create(Product,
         :product_category_id => @c[i].id, :profile_id => @e[(i+1)/2].id
       )
@@ -165,10 +165,9 @@ class SnifferMapTest < ActionDispatch::IntegrationTest
       :identifier => 'acme', :name => 'ACME S.A.', :lat => 0, :lng => 0
     )
     # get the extended sniffer profile for the enterprise:
-    sniffer_acme = SnifferPlugin::Profile.find_or_create acme
-    sniffer_acme.product_category_string_ids = "#{@c[1].id},#{@c[4].id}"
-    sniffer_acme.enabled = true
-    sniffer_acme.save!
+    acme.sniffer_interested_product_category_string_ids = "#{@c[1].id},#{@c[4].id}"
+    acme.enabled = true
+    acme.save!
 
     # visit the map page:
     get url_plugin_myprofile(acme, :search)

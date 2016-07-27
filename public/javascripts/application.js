@@ -26,9 +26,9 @@
 *= require pagination.js
 * views speficics
 *= require add-and-join.js
+*= require followers.js
+*= require manage-followers.js
 *= require report-abuse.js
-*= require manage-products.js
-*= require catalog.js
 *= require autogrow.js
 *= require slick.js
 *= require block-store.js
@@ -37,6 +37,7 @@
 *= require email_templates.js
 *= require slick.js
 *= require block-store.js
+*= require email_templates.js
 */
 
 // lodash configuration
@@ -242,8 +243,6 @@ function update_loading(message) {
 function redirect_to(url) {
   document.location=url;
 }
-
-/* Products edition  */
 
 function numbersonly(e, separator) {
   var key;
@@ -555,6 +554,11 @@ function add_input_unit(id, selected_unit) {
 function loading_for_button(selector) {
   jQuery(selector).append("<div class='small-loading' style='width:16px; height:16px; position:absolute; top:0; right:-20px;'></div>");
   jQuery(selector).css('cursor', 'progress');
+}
+
+function hide_loading_for_button(selector) {
+  selector.css("cursor","");
+  $(".small-loading").remove();
 }
 
 function new_qualifier_row(selector, select_qualifiers, delete_button) {

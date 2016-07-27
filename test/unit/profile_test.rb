@@ -319,17 +319,17 @@ class ProfileTest < ActiveSupport::TestCase
   end
 
   should 'have administator role' do
-    Role.expects(:find_by_key_and_environment_id).with('profile_admin', Environment.default.id).returns(Role.new)
+    Role.expects(:find_by).with(key: 'profile_admin', environment_id: Environment.default.id).returns(Role.new)
     assert_kind_of Role, Profile::Roles.admin(Environment.default.id)
   end
 
   should 'have member role' do
-    Role.expects(:find_by_key_and_environment_id).with('profile_member', Environment.default.id).returns(Role.new)
+    Role.expects(:find_by).with(key: 'profile_member', environment_id: Environment.default.id).returns(Role.new)
     assert_kind_of Role, Profile::Roles.member(Environment.default.id)
   end
 
   should 'have moderator role' do
-    Role.expects(:find_by_key_and_environment_id).with('profile_moderator', Environment.default.id).returns(Role.new)
+    Role.expects(:find_by).with(key: 'profile_moderator', environment_id: Environment.default.id).returns(Role.new)
     assert_kind_of Role, Profile::Roles.moderator(Environment.default.id)
   end
 
@@ -434,14 +434,14 @@ class ProfileTest < ActiveSupport::TestCase
   should 'not advertise articles created together with the profile' do
     Profile.any_instance.stubs(:default_set_of_articles).returns([Article.new(:name => 'home'), RssFeed.new(:name => 'feed')])
     profile = create(Profile)
-    refute profile.articles.find_by_path('home').advertise?
-    refute profile.articles.find_by_path('feed').advertise?
+    refute profile.articles.find_by(path: 'home').advertise?
+    refute profile.articles.find_by(path: 'feed').advertise?
   end
 
   should 'advertise article after update' do
     Profile.any_instance.stubs(:default_set_of_articles).returns([Article.new(:name => 'home')])
     profile = create(Profile)
-    article = profile.articles.find_by_path('home')
+    article = profile.articles.find_by(path: 'home')
     refute article.advertise?
     article.name = 'Changed name'
     article.save!
@@ -651,10 +651,6 @@ class ProfileTest < ActiveSupport::TestCase
 
     assert_includes profile.categories(true), category
     assert_includes profile.categories_including_virtual(true), pcat
-  end
-
-  should 'not accept product category as category' do
-    refute Profile.new.accept_category?(ProductCategory.new)
   end
 
   should 'not accept region as a category' do
@@ -1033,7 +1029,7 @@ class ProfileTest < ActiveSupport::TestCase
 
     p.apply_template(template)
 
-    assert_not_nil p.articles.find_by_name('template article')
+    assert_not_nil p.articles.find_by(name: 'template article')
   end
 
   should 'rename existing articles when applying template' do
@@ -1049,8 +1045,8 @@ class ProfileTest < ActiveSupport::TestCase
 
     p.apply_template(template)
 
-    assert_not_nil p.articles.find_by_name('some article 2')
-    assert_not_nil p.articles.find_by_name('some article')
+    assert_not_nil p.articles.find_by(name: 'some article 2')
+    assert_not_nil p.articles.find_by(name: 'some article')
   end
 
   should 'copy header when applying template' do
@@ -1326,7 +1322,7 @@ class ProfileTest < ActiveSupport::TestCase
     task2 = Task.create!(:requestor => person, :target => another)
 
     person.stubs(:is_admin?).with(other).returns(true)
-    Environment.find(:all).select{|i| i != other }.each do |env|
+    Environment.all.select{|i| i != other }.each do |env|
       person.stubs(:is_admin?).with(env).returns(false)
     end
 
@@ -1580,8 +1576,8 @@ class ProfileTest < ActiveSupport::TestCase
 
   should 'list all events' do
     profile = fast_create(Profile)
-    event1 = Event.new(:name => 'Ze Birthday', :start_date => DateTime.now)
-    event2 = Event.new(:name => 'Mane Birthday', :start_date => DateTime.now >> 1)
+    event1 = Event.new(:name => 'Ze Birthday', :start_date => DateTime.now.in_time_zone)
+    event2 = Event.new(:name => 'Mane Birthday', :start_date => DateTime.now.in_time_zone >> 1)
     profile.events << [event1, event2]
     assert_includes profile.events, event1
     assert_includes profile.events, event2
@@ -1590,7 +1586,7 @@ class ProfileTest < ActiveSupport::TestCase
   should 'list events by day' do
     profile = fast_create(Profile)
 
-    today = DateTime.now
+    today = DateTime.now.in_time_zone
     yesterday_event = Event.new(:name => 'Joao Birthday', :start_date => today - 1.day)
     today_event = Event.new(:name => 'Ze Birthday', :start_date => today)
     tomorrow_event = Event.new(:name => 'Mane Birthday', :start_date => today + 1.day)
@@ -1616,7 +1612,7 @@ class ProfileTest < ActiveSupport::TestCase
   should 'list events in a range' do
     profile = fast_create(Profile)
 
-    today = DateTime.now
+    today = DateTime.now.in_time_zone
     event_in_range = Event.new(:name => 'Noosfero Conference', :start_date => today - 2.day, :end_date => today + 2.day)
     event_in_day = Event.new(:name => 'Ze Birthday', :start_date => today)
 
@@ -1630,7 +1626,7 @@ class ProfileTest < ActiveSupport::TestCase
   should 'not list events out of range' do
     profile = fast_create(Profile)
 
-    today = DateTime.now
+    today = DateTime.now.in_time_zone
     event_in_range1 = Event.new(:name => 'Foswiki Conference', :start_date => today - 2.day, :end_date => today + 2.day)
     event_in_range2 = Event.new(:name => 'Debian Conference', :start_date => today - 2.day, :end_date => today + 3.day)
     event_out_of_range = Event.new(:name => 'Ze Birthday', :start_date => today - 5.day, :end_date => today - 3.day)
@@ -1644,9 +1640,9 @@ class ProfileTest < ActiveSupport::TestCase
 
   should 'sort events by date' do
     profile = fast_create(Profile)
-    event1 = Event.new(:name => 'Noosfero Hackaton', :start_date => DateTime.now)
-    event2 = Event.new(:name => 'Debian Day', :start_date => DateTime.now - 1)
-    event3 = Event.new(:name => 'Fisl 10', :start_date => DateTime.now + 1)
+    event1 = Event.new(:name => 'Noosfero Hackaton', :start_date => DateTime.now.in_time_zone)
+    event2 = Event.new(:name => 'Debian Day', :start_date => DateTime.now.in_time_zone - 1)
+    event3 = Event.new(:name => 'Fisl 10', :start_date => DateTime.now.in_time_zone + 1)
     profile.events << [event1, event2, event3]
     assert_equal [event2, event1, event3], profile.events
   end
@@ -1712,7 +1708,7 @@ class ProfileTest < ActiveSupport::TestCase
   should 'find more recent profile' do
     Profile.delete_all
     p1 = fast_create(Profile, :created_at => 4.days.ago)
-    p2 = fast_create(Profile, :created_at => Time.now)
+    p2 = fast_create(Profile, :created_at => Time.now.in_time_zone)
     p3 = fast_create(Profile, :created_at => 2.days.ago)
     assert_equal [p2,p3,p1] , Profile.more_recent
 
@@ -1743,19 +1739,19 @@ class ProfileTest < ActiveSupport::TestCase
 
   should "return one activity on label if the profile has one action" do
     p = fast_create(Profile)
-    fast_create(ActionTracker::Record, :user_type => 'Profile', :user_id => p, :created_at => Time.now)
+    fast_create(ActionTracker::Record, :user_type => 'Profile', :user_id => p, :created_at => Time.now.in_time_zone)
     assert_equal 1, p.recent_actions.count
     assert_equal "one activity", p.more_active_label
   end
 
   should "return number of activities on label if the profile has more than one action" do
     p = fast_create(Profile)
-    fast_create(ActionTracker::Record, :user_type => 'Profile', :user_id => p, :created_at => Time.now)
-    fast_create(ActionTracker::Record, :user_type => 'Profile', :user_id => p, :created_at => Time.now)
+    fast_create(ActionTracker::Record, :user_type => 'Profile', :user_id => p, :created_at => Time.now.in_time_zone)
+    fast_create(ActionTracker::Record, :user_type => 'Profile', :user_id => p, :created_at => Time.now.in_time_zone)
     assert_equal 2, p.recent_actions.count
     assert_equal "2 activities", p.more_active_label
 
-    fast_create(ActionTracker::Record, :user_type => 'Profile', :user_id => p, :created_at => Time.now)
+    fast_create(ActionTracker::Record, :user_type => 'Profile', :user_id => p, :created_at => Time.now.in_time_zone)
     assert_equal 3, p.recent_actions.count
     assert_equal "3 activities", p.more_active_label
   end
@@ -1778,9 +1774,9 @@ class ProfileTest < ActiveSupport::TestCase
   should "destroy scrap if receiver was removed" do
     person = fast_create(Person)
     scrap = fast_create(Scrap, :receiver_id => person.id)
-    assert_not_nil Scrap.find_by_id(scrap.id)
+    assert_not_nil Scrap.find_by(id: scrap.id)
     person.destroy
-    assert_nil Scrap.find_by_id(scrap.id)
+    assert_nil Scrap.find_by(id: scrap.id)
   end
 
   should 'have forum' do
@@ -1814,6 +1810,21 @@ class ProfileTest < ActiveSupport::TestCase
     community.add_member(person)
 
     assert_equal [person], community.members
+  end
+
+  should 'return a list members by email of a community' do
+    someone = create_user('Someone', email:'someone@test.com.br')
+    someperson = create_user('Someperson',email:'someperson@test.com.br')
+
+    community = fast_create(Community)
+    community.add_member(someone.person)
+    community.add_member(someperson.person)
+
+    result = community.members_like 'email', '@test.com.br'
+
+    assert_includes result, someone.person
+    assert_includes result, someperson.person
+
   end
 
   should 'count unique members of a community' do
@@ -1881,12 +1892,21 @@ class ProfileTest < ActiveSupport::TestCase
     assert_includes Profile.communities, child
   end
 
-  should 'get organization roles' do
+  should 'get organization member roles' do
     env = fast_create(Environment)
     roles = %w(foo bar profile_foo profile_bar).map{ |r| create(Role, :name => r, :key => r, :environment_id => env.id, :permissions => ["some"]) }
     create Role, :name => 'test', :key => 'profile_test', :environment_id => env.id + 1
     Profile::Roles.expects(:all_roles).returns(roles)
     assert_equal roles[2..3], Profile::Roles.organization_member_roles(env.id)
+  end
+
+  should 'get organization roles' do
+    env = fast_create(Environment)
+    env.roles.delete_all
+    profile = fast_create(Organization)
+    roles = %w(foo bar profile_foo profile_bar).map{ |r| create(Role, :name => r, :key => r, :environment_id => env.id, :permissions => ["some"]) }
+    roles << create(Role, name: 'test', key: 'something_else', environment_id: env.id, profile_id: profile.id)
+    assert_equal roles[2..4], Profile::Roles.organization_roles(env.id, profile.id)
   end
 
   should 'get all roles' do
@@ -1913,13 +1933,13 @@ class ProfileTest < ActiveSupport::TestCase
   should 'merge members of plugins to original members' do
     class Plugin1 < Noosfero::Plugin
       def organization_members(profile)
-        Person.members_of(Community.find_by_identifier('community1'))
+        Person.members_of(Community.find_by(identifier: 'community1'))
       end
     end
 
     class Plugin2 < Noosfero::Plugin
       def organization_members(profile)
-        Person.members_of(Community.find_by_identifier('community2'))
+        Person.members_of(Community.find_by(identifier: 'community2'))
       end
     end
     Noosfero::Plugin.stubs(:all).returns(['ProfileTest::Plugin1', 'ProfileTest::Plugin2'])
@@ -2133,7 +2153,7 @@ class ProfileTest < ActiveSupport::TestCase
     suggested_person = fast_create(Person)
     suggestion = ProfileSuggestion.create(:person => person, :suggestion => suggested_person, :enabled => true)
 
-    assert_difference 'ProfileSuggestion.find_all_by_suggestion_id(suggested_person.id).count', -1 do
+    assert_difference 'ProfileSuggestion.where(suggestion_id: suggested_person.id).count', -1 do
       suggested_person.destroy
     end
   end
@@ -2167,10 +2187,10 @@ class ProfileTest < ActiveSupport::TestCase
   end
 
   should 'fetch profiles older than a specific date' do
-    p1 = fast_create(Profile, :created_at => Time.now)
-    p2 = fast_create(Profile, :created_at => Time.now - 1.day)
-    p3 = fast_create(Profile, :created_at => Time.now - 2.days)
-    p4 = fast_create(Profile, :created_at => Time.now - 3.days)
+    p1 = fast_create(Profile, :created_at => Time.now.in_time_zone)
+    p2 = fast_create(Profile, :created_at => Time.now.in_time_zone - 1.day)
+    p3 = fast_create(Profile, :created_at => Time.now.in_time_zone - 2.days)
+    p4 = fast_create(Profile, :created_at => Time.now.in_time_zone - 3.days)
 
     profiles = Profile.older_than(p2.created_at)
 
@@ -2181,10 +2201,10 @@ class ProfileTest < ActiveSupport::TestCase
   end
 
   should 'fetch profiles younger than a specific date' do
-    p1 = fast_create(Profile, :created_at => Time.now)
-    p2 = fast_create(Profile, :created_at => Time.now - 1.day)
-    p3 = fast_create(Profile, :created_at => Time.now - 2.days)
-    p4 = fast_create(Profile, :created_at => Time.now - 3.days)
+    p1 = fast_create(Profile, :created_at => Time.now.in_time_zone)
+    p2 = fast_create(Profile, :created_at => Time.now.in_time_zone - 1.day)
+    p3 = fast_create(Profile, :created_at => Time.now.in_time_zone - 2.days)
+    p4 = fast_create(Profile, :created_at => Time.now.in_time_zone - 3.days)
 
     profiles = Profile.younger_than(p3.created_at)
 
@@ -2192,5 +2212,33 @@ class ProfileTest < ActiveSupport::TestCase
     assert_includes profiles, p2
     assert_not_includes profiles, p3
     assert_not_includes profiles, p4
+  end
+  
+  ['post_content', 'edit_profile', 'destroy_profile'].each do |permission|
+    should "return true in #{permission} when user has this permission" do
+      profile = fast_create(Profile)
+      person = fast_create(Person)
+      give_permission(person, permission, profile)
+      assert profile.send("allow_#{permission.gsub(/_profile/,'')}?", person)
+    end
+
+    should "return false in #{permission} when user doesn't have this permission" do
+      profile = fast_create(Profile)
+      person = fast_create(Person)
+      assert !profile.send("allow_#{permission.gsub(/_profile/,'')}?", person)
+    end
+
+    should "return false in #{permission} when user is nil" do
+      profile = fast_create(Profile)
+      assert !profile.send("allow_#{permission.gsub(/_profile/,'')}?", nil)
+    end
+  end
+
+  should 'not allow to add members in secret profiles' do
+    c = fast_create(Community, secret: true)
+    p = create_user('mytestuser').person
+    assert_raise RuntimeError do
+      c.add_member(p)
+    end
   end
 end

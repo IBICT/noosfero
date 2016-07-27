@@ -6,8 +6,7 @@ class ProfileEditorControllerTest < ActionController::TestCase
 
   def setup
     @controller = ProfileEditorController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
+
     @profile = create_user('default_user').person
     Environment.default.affiliate(@profile, [Environment::Roles.admin(Environment.default.id)] + Profile::Roles.all_roles(Environment.default.id))
     login_as('default_user')
@@ -579,20 +578,6 @@ class ProfileEditorControllerTest < ActionController::TestCase
     assert_tag :tag => 'a', :attributes => { :href => "/myprofile/#{enterprise.identifier}/profile_editor/header_footer" }
   end
 
-  should 'not list the manage products button if the environment disabled it' do
-    env = Environment.default
-    env.disable('products_for_enterprises')
-    env.save!
-    ent = fast_create(Enterprise)
-
-    u = create_user_with_permission('test_user', 'edit_profile', ent)
-    login_as('test_user')
-
-    get :index, :profile => ent.identifier
-
-    assert_no_tag :tag => 'span', :content => 'Manage Products and Services'
-  end
-
   should 'display categories if environment disable_categories disabled' do
     Environment.any_instance.stubs(:enabled?).with(anything).returns(false)
     get :edit, :profile => profile.identifier
@@ -657,9 +642,10 @@ class ProfileEditorControllerTest < ActionController::TestCase
 
     profile.domains << Domain.new(:name => 'myowndomain.net')
     profile.environment.domains << Domain.new(:name => 'myenv.net')
-    ActionController::TestRequest.any_instance.stubs(:host).returns(profile.hostname)
 
+    @request.env['HTTP_HOST'] = profile.hostname
     get :edit, :profile => profile.identifier
+
     assert_tag :tag => 'select', :attributes => { :name => 'profile_data[preferred_domain_id]' }, :descendant => { :tag => "option", :content => 'myowndomain.net' }
     assert_tag :tag => 'select', :attributes => { :name => 'profile_data[preferred_domain_id]' }, :descendant => { :tag => "option", :content => 'myenv.net' }
 
@@ -673,9 +659,10 @@ class ProfileEditorControllerTest < ActionController::TestCase
 
     profile.domains << Domain.new(:name => 'myowndomain.net')
     profile.environment.domains << Domain.new(:name => 'myenv.net')
-    ActionController::TestRequest.any_instance.stubs(:host).returns(profile.hostname)
 
+    @request.env['HTTP_HOST'] = profile.hostname
     get :edit, :profile => profile.identifier
+
     assert_tag :tag => "select", :attributes => { :name => 'profile_data[preferred_domain_id]'}, :descendant => { :tag => 'option', :content => '&lt;Select domain&gt;', :attributes => { :value => '' } }
 
     post :edit, :profile => profile.identifier, :profile_data => { :preferred_domain_id => '' }
@@ -1002,7 +989,7 @@ class ProfileEditorControllerTest < ActionController::TestCase
   should 'add extra content provided by plugins on edit' do
     class TestProfileEditPlugin < Noosfero::Plugin
       def profile_editor_extras
-        "<input id='field_added_by_plugin' value='value_of_field_added_by_plugin'/>"
+        "<input id='field_added_by_plugin' value='value_of_field_added_by_plugin'/>".html_safe
       end
     end
     Noosfero::Plugin.stubs(:all).returns([TestProfileEditPlugin.to_s])
@@ -1018,7 +1005,7 @@ class ProfileEditorControllerTest < ActionController::TestCase
     class TestProfileEditPlugin < Noosfero::Plugin
       def profile_editor_extras
         lambda do
-          render :text => "<input id='field_added_by_plugin' value='value_of_field_added_by_plugin'/>"
+          (render :text => "<input id='field_added_by_plugin' value='value_of_field_added_by_plugin'/>".html_safe).html_safe
         end
       end
     end
@@ -1043,12 +1030,12 @@ class ProfileEditorControllerTest < ActionController::TestCase
   should 'add extra content on person info from plugins' do
     class Plugin1 < Noosfero::Plugin
       def profile_info_extra_contents
-        proc {"<strong>Plugin1 text</strong>"}
+        proc {"<strong>Plugin1 text</strong>".html_safe}
       end
     end
     class Plugin2 < Noosfero::Plugin
       def profile_info_extra_contents
-        proc {"<strong>Plugin2 text</strong>"}
+        proc {"<strong>Plugin2 text</strong>".html_safe}
       end
     end
     Noosfero::Plugin.stubs(:all).returns([Plugin1.to_s, Plugin2.to_s])
@@ -1065,12 +1052,12 @@ class ProfileEditorControllerTest < ActionController::TestCase
   should 'add extra content on organization info from plugins' do
     class Plugin1 < Noosfero::Plugin
       def profile_info_extra_contents
-        proc {"<strong>Plugin1 text</strong>"}
+        proc {"<strong>Plugin1 text</strong>".html_safe}
       end
     end
     class Plugin2 < Noosfero::Plugin
       def profile_info_extra_contents
-        proc {"<strong>Plugin2 text</strong>"}
+        proc {"<strong>Plugin2 text</strong>".html_safe}
       end
     end
     Noosfero::Plugin.stubs(:all).returns([Plugin1.to_s, Plugin2.to_s])
@@ -1126,49 +1113,11 @@ class ProfileEditorControllerTest < ActionController::TestCase
   should 'not redirect if the profile_hostname is the same as environment hostname' do
     Person.any_instance.stubs(:hostname).returns('hostname.org')
     Environment.any_instance.stubs(:default_hostname).returns('hostname.org')
-    ActionController::TestRequest.any_instance.stubs(:host).returns('hostname.org')
+
+    @request.env['HTTP_HOST'] = 'hostname.org'
     get :index, :profile => profile.identifier
+
     assert_response :success
-  end
-
-  should 'display field to choose number of products if enterprise and enabled on environment' do
-    enterprise = fast_create(Enterprise)
-    enterprise.environment.enable('products_for_enterprises')
-    get :edit, :profile => enterprise.identifier
-    assert_tag :tag => 'div', :descendant => { :tag => 'h2', :content => 'Products/Services catalog' }
-    assert_tag :tag => 'div',
-               :attributes => { :class => 'formfield type-text' },
-               :descendant => {:tag => 'input', :attributes => {:id => 'profile_data_products_per_catalog_page'} }
-  end
-
-  should 'not display field to choose number of products if enterprise but disabled on environment' do
-    enterprise = fast_create(Enterprise)
-    enterprise.environment.disable('products_for_enterprises')
-    get :edit, :profile => enterprise.identifier
-    assert_no_tag :tag => 'div', :descendant => { :tag => 'h2', :content => 'Products/Services catalog' }
-    assert_no_tag :tag => 'div',
-               :attributes => { :class => 'formfield type-text' },
-               :descendant => {:tag => 'input', :attributes => {:id => 'profile_data_products_per_catalog_page'} }
-  end
-
-  should 'not display field to choose number of products if enabled on environment but not enterprise' do
-    community = fast_create(Community)
-    community.environment.enable('products_for_enterprises')
-    get :edit, :profile => community.identifier
-    assert_no_tag :tag => 'div', :descendant => { :tag => 'h2', :content => 'Products/Services catalog' }
-    assert_no_tag :tag => 'div',
-               :attributes => { :class => 'formfield type-text' },
-               :descendant => {:tag => 'input', :attributes => {:id => 'profile_data_products_per_catalog_page'} }
-  end
-
-  should 'not display field to choose number of products if disabled on environment and not enterprise' do
-    community = fast_create(Community)
-    community.environment.disable('products_for_enterprises')
-    get :edit, :profile => community.identifier
-    assert_no_tag :tag => 'div', :descendant => { :tag => 'h2', :content => 'Products/Services catalog' }
-    assert_no_tag :tag => 'div',
-               :attributes => { :class => 'formfield type-text' },
-               :descendant => {:tag => 'input', :attributes => {:id => 'profile_data_products_per_catalog_page'} }
   end
 
   should 'show head and footer for admin' do
@@ -1222,6 +1171,13 @@ class ProfileEditorControllerTest < ActionController::TestCase
   should 'not display button to manage roles on control panel of person' do
     get :index, :profile => profile.identifier
     assert_no_tag :tag => 'a', :attributes => { :href => "/myprofile/default_user/profile_roles" }
+  end
+
+  should 'save profile admin option to receive email for every task' do
+    comm = fast_create(Community)
+    assert comm.profile_admin_mail_notification
+    post :edit, :profile => comm.identifier, :profile_data => { :profile_admin_mail_notification => '0' }
+    refute comm.reload.profile_admin_mail_notification
   end
 
 end

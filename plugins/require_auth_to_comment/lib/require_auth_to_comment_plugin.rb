@@ -17,7 +17,7 @@ class RequireAuthToCommentPlugin < Noosfero::Plugin
   end
 
   def profile_editor_extras
-    expanded_template('profile-editor-extras.html.erb')
+    expanded_template('profile-editor-extras.html.erb').html_safe
   end
 
   def stylesheet?
@@ -38,7 +38,7 @@ class RequireAuthToCommentPlugin < Noosfero::Plugin
   end
 
   def body_beginning
-    "<meta name='profile.allow_unauthenticated_comments'/>" if allowed_by_profile
+    tag :meta, name: 'profile.allow_unauthenticated_comments' if allowed_by_profile
   end
 
   protected

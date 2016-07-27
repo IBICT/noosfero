@@ -85,7 +85,7 @@ class CkeditorArticleTest < ActiveSupport::TestCase
     assert_includes Environment.default.trusted_sites_for_iframe, 'itheora.org'
 
     article = create(CkeditorContentPlugin::CkeditorArticle, :profile => profile, :name => 'article', :abstract => 'abstract', :body => "<iframe src='http://itheora.org/videos.ogg' src='http://untrusted_site.com/videos.ogg'></iframe>")
-    assert_equal '', article.body
+    assert_equal '<iframe src="http://itheora.org/videos.ogg"></iframe>', article.body
   end
 
   should 'not sanitize html comments' do
@@ -93,7 +93,7 @@ class CkeditorArticleTest < ActiveSupport::TestCase
     article.body = '<p><!-- <asdf> << aasdfa >>> --> <h1> Wellformed html code </h1>'
     article.valid?
 
-    assert_match  /<!-- .* --> <h1> Wellformed html code <\/h1>/, article.body
+    assert_match  /<p><!-- .* --> <\/p><h1> Wellformed html code <\/h1>/, article.body
   end
 
   should 'not allow XSS on name' do

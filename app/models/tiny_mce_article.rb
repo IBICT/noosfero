@@ -1,5 +1,3 @@
-require 'white_list_filter'
-
 class TinyMceArticle < TextArticle
 
   def self.short_description
@@ -30,6 +28,10 @@ class TinyMceArticle < TextArticle
 
   def can_display_media_panel?
     true
+  end
+
+  def self.can_display_blocks?
+    false
   end
 
 end

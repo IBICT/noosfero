@@ -1,4 +1,4 @@
-class Image < ActiveRecord::Base
+class Image < ApplicationRecord
 
   attr_accessible :uploaded_data, :label, :remove_image
   attr_accessor :remove_image
@@ -23,6 +23,7 @@ class Image < ActiveRecord::Base
 
   validates_attachment :size => N_("{fn} of uploaded file was larger than the maximum size of 5.0 MB").fix_i18n
 
+  extend DelayedAttachmentFu::ClassMethods
   delay_attachment_fu_thumbnails
 
   postgresql_attachment_fu

@@ -19,7 +19,6 @@
                      :id => "members-tab",
                      :content => div_members
                      } %>
-
     <% div_admins = content_tag :div, :class => "profile-admins" do
       render :partial => 'profile_members_list',
                             :locals => {
@@ -37,7 +36,7 @@
   </div><!-- end of class="profile-members-tabs-container" -->
 <% end %>
 
-<% button_bar do %>
+<%= button_bar do %>
   <%= button :back, _('Go back'), { :controller => 'profile' } %>
   <% if profile.community? and user %>
     <% if user.has_permission?(:invite_members, profile) %>

@@ -5,22 +5,32 @@ module ActionTrackerHelper
   end
 
   def new_friendship_description ta
-    n_('has made 1 new friend:<br />%{name}', 'has made %{num} new friends:<br />%{name}', ta.get_friend_name.size) % {
+    n_('has made 1 new friend:<br />%{name}', 'has made %{num} new friends:<br />%{name}', ta.get_friend_name.size).html_safe % {
       num: ta.get_friend_name.size,
-      name: ta.collect_group_with_index(:friend_name) do |n,i|
+      name: safe_join(ta.collect_group_with_index(:friend_name) do |n,i|
         link_to image_tag(ta.get_friend_profile_custom_icon[i] || default_or_themed_icon("/images/icons-app/person-icon.png")),
                 ta.get_friend_url[i], title: n
-      end.join
+      end)
+    }
+  end
+
+  def new_follower_description ta
+    n_('has 1 new follower:<br />%{name}', 'has %{num} new followers:<br />%{name}', ta.get_follower_name.size).html_safe % {
+      num: ta.get_follower_name.size,
+      name: safe_join(ta.collect_group_with_index(:follower_name) do |n,i|
+        link_to image_tag(ta.get_follower_profile_custom_icon[i] || default_or_themed_icon("/images/icons-app/person-icon.png")),
+          ta.get_follower_url[i], title: n
+      end)
     }
   end
 
   def join_community_description ta
-    n_('has joined 1 community:<br />%{name}', 'has joined %{num} communities:<br />%{name}', ta.get_resource_name.size) % {
+    n_('has joined 1 community:<br />%{name}', 'has joined %{num} communities:<br />%{name}', ta.get_resource_name.size).html_safe % {
       num: ta.get_resource_name.size,
-      name: ta.collect_group_with_index(:resource_name) do |n,i|
-        link_to image_tag(ta.get_resource_profile_custom_icon[i] || default_or_themed_icon("/images/icons-app/community-icon.png")),
+      name: safe_join(ta.collect_group_with_index(:resource_name) do |n,i|
+       link = link_to image_tag(ta.get_resource_profile_custom_icon[i] || default_or_themed_icon("/images/icons-app/community-icon.png")),
                 ta.get_resource_url[i], title: n
-      end.join
+      end)
     }
   end
 
@@ -67,28 +77,10 @@ module ActionTrackerHelper
     }
   end
 
-  def create_product_description ta
-    _('created the product %{title}') % {
-      title: link_to(truncate(ta.get_name), ta.get_url),
-    }
-  end
-
-  def update_product_description ta
-    _('updated the product %{title}') % {
-      title: link_to(truncate(ta.get_name), ta.get_url),
-    }
-  end
-
-  def remove_product_description ta
-    _('removed the product %{title}') % {
-      title: truncate(ta.get_name),
-    }
-  end
-
   def favorite_enterprise_description ta
-    _('favorited enterprise %{title}') % {
+    (_('favorited enterprise %{title}') % {
       title: link_to(truncate(ta.get_enterprise_name), ta.get_enterprise_url),
-    }
+    }).html_safe
   end
 
 end

@@ -12,6 +12,10 @@ ActionTrackerConfig.verbs = {
     type: :groupable
   },
 
+  new_follower: {
+    type: :groupable
+  },
+
   join_community: {
     type: :groupable
   },
@@ -30,15 +34,6 @@ ActionTrackerConfig.verbs = {
   },
 
   reply_scrap_on_self: {
-  },
-
-  create_product: {
-  },
-
-  update_product: {
-  },
-
-  remove_product: {
   },
 
   favorite_enterprise: {

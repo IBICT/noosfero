@@ -4,15 +4,13 @@ class EnvironmentThemesControllerTest < ActionController::TestCase
 
   def setup
     @controller = EnvironmentThemesController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
 
     Theme.stubs(:user_themes_dir).returns(TMP_THEMES_DIR)
 
     @env = Environment.default
     login = create_admin_user(@env)
     login_as(login)
-    @profile = User.find_by_login(login).person
+    @profile = User.find_by(login: login).person
   end
 
   def teardown

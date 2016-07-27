@@ -5,15 +5,15 @@ module Noosfero::Factory
     attrs[:slug] = attrs[:name].to_slug if attrs[:name].present? && attrs[:slug].blank? && defaults[:slug].present?
     data = defaults_for(name.to_s.gsub('::','')).merge(attrs)
     klass = name.to_s.camelize.constantize
-    if klass.superclass != ActiveRecord::Base
-      data[:type] = klass.to_s
-    end
+
+    data[:type] = klass.to_s if klass.column_names.include? 'type'
+
     if options[:timestamps]
       fast_insert_with_timestamps(klass, data)
     else
       fast_insert(klass, data)
     end
-    obj = klass.last(:order => "id")
+    obj = klass.order(:id).last
     if options[:category]
       categories = options[:category]
       unless categories.is_a?(Array)
@@ -52,9 +52,7 @@ module Noosfero::Factory
  end
 
   def defaults_for(name)
-    send('defaults_for_' + name.to_s.underscore)
-  rescue
-    {}
+    send "defaults_for_#{name.to_s.underscore.tr '/', '_'}" rescue {}
   end
 
   def self.num_seq
@@ -65,8 +63,8 @@ module Noosfero::Factory
 
   ###### old stuff to be rearranged
   def create_admin_user(env)
-    admin_user = User.find_by_login('adminuser') || create_user('adminuser', :email => 'adminuser@noosfero.org', :password => 'adminuser', :password_confirmation => 'adminuser', :environment => env)
-    admin_role = Role.find_by_name('admin_role') || Role.create!(:name => 'admin_role', :permissions => ['view_environment_admin_panel','edit_environment_features', 'edit_environment_design', 'manage_environment_categories', 'manage_environment_roles', 'manage_environment_trusted_sites', 'manage_environment_validators', 'manage_environment_users', 'manage_environment_organizations', 'manage_environment_templates', 'manage_environment_licenses', 'edit_appearance'])
+    admin_user = User.find_by(login: 'adminuser') || create_user('adminuser', :email => 'adminuser@noosfero.org', :password => 'adminuser', :password_confirmation => 'adminuser', :environment => env)
+    admin_role = Role.find_by(name: 'admin_role') || Role.create!(:name => 'admin_role', :permissions => ['view_environment_admin_panel','edit_environment_features', 'edit_environment_design', 'manage_environment_categories', 'manage_environment_roles', 'manage_environment_trusted_sites', 'manage_environment_validators', 'manage_environment_users', 'manage_environment_organizations', 'manage_environment_templates', 'manage_environment_licenses', 'edit_appearance'])
     create(RoleAssignment, :accessor => admin_user.person, :role => admin_role, :resource => env) unless admin_user.person.role_assignments.map{|ra|[ra.role, ra.accessor, ra.resource]}.include?([admin_role, admin_user, env])
     admin_user.login
   end
@@ -129,10 +127,10 @@ module Noosfero::Factory
 
   def fast_insert(klass, data)
     names = data.keys
-    values = names.map {|k| ActiveRecord::Base.send(:sanitize_sql_array, ['?', data[k]]) }
+    values = names.map {|k| ApplicationRecord.send(:sanitize_sql_array, ['?', data[k]]) }
     sql = 'insert into %s(%s) values (%s)' % [klass.table_name, names.join(','), values.join(',')]
     klass.connection.execute(sql)
-    klass.last(:order => 'id')
+    klass.order(:id).last
   end
 
   def fast_insert_with_timestamps(klass, data)
@@ -145,10 +143,10 @@ module Noosfero::Factory
   end
 
   def give_permission(user, permission, target)
-    user = Person.find_by_identifier(user) if user.kind_of?(String)
+    user = Person.find_by(identifier: user) if user.kind_of?(String)
     target ||= user
     i = 0
-    while Role.find_by_name('test_role' + i.to_s)
+    while Role.find_by(name: 'test_role' + i.to_s)
       i+=1
     end
 
@@ -316,7 +314,6 @@ module Noosfero::Factory
   end
 
   alias :defaults_for_region :defaults_for_category
-  alias :defaults_for_product_category :defaults_for_category
 
   ###############################################
   # Box
@@ -348,43 +345,11 @@ module Noosfero::Factory
   alias :defaults_for_email_activation :defaults_for_task
 
   ###############################################
-  # Product
-  ###############################################
-
-  def defaults_for_product
-    { :name => 'Product ' + factory_num_seq.to_s }
-  end
-
-  ###############################################
-  # Input
-  ###############################################
-
-  def defaults_for_input
-    { }
-  end
-
-  ###############################################
   # Contact
   ###############################################
 
   def defaults_for_contact
     { :subject => 'hello there', :message => 'here I come to SPAM you' }
-  end
-
-  ###############################################
-  # Qualifier
-  ###############################################
-
-  def defaults_for_qualifier
-    { :name => 'Qualifier ' + factory_num_seq.to_s, :environment_id => 1 }
-  end
-
-  ###############################################
-  # Certifier
-  ###############################################
-
-  def defaults_for_certifier
-    defaults_for_qualifier.merge({ :name => 'Certifier ' + factory_num_seq.to_s })
   end
 
   ###############################################
@@ -461,22 +426,6 @@ module Noosfero::Factory
   def defaults_for_comment(params = {})
     name = "comment_#{rand(1000)}"
     { :title => name, :body => "my own comment", :source_id => 1, :source_type => 'Article' }.merge(params)
-  end
-
-  ###############################################
-  # Unit
-  ###############################################
-
-  def defaults_for_unit
-    { :singular => 'Litre', :plural => 'Litres', :environment_id => 1 }
-  end
-
-  ###############################################
-  # Production Cost
-  ###############################################
-
-  def defaults_for_production_cost
-    { :name => 'Production cost ' + factory_num_seq.to_s }
   end
 
   ###############################################

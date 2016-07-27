@@ -46,7 +46,7 @@ class CommentParagraphPlugin < Noosfero::Plugin
 
   def article_extra_toolbar_buttons(article)
     user = context.send :user
-    return [] if !article.comment_paragraph_plugin_enabled? || !article.allow_edit?(user)
+    return [] if !article.comment_paragraph_plugin_enabled? || !article.allow_edit?(user) || article.kind_of?(CommentParagraphPlugin::Discussion)
     buttons = [
       {
       :title => article.comment_paragraph_plugin_activated? ? _('Deactivate Comments') : _('Activate Comments'),
@@ -60,6 +60,20 @@ class CommentParagraphPlugin < Noosfero::Plugin
       :icon => :toggle_comment_paragraph
     } if article.comment_paragraph_plugin_activated?
     buttons
+  end
+
+  def self.api_mount_points
+    [CommentParagraphPlugin::API]
+  end
+
+  def self.extra_blocks
+    {
+      CommentParagraphPlugin::DiscussionBlock => {:position => ['1','2','3'] }
+    }
+  end
+
+  def content_types
+    [CommentParagraphPlugin::Discussion]
   end
 
 end

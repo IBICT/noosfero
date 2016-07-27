@@ -103,3 +103,5 @@ environment_administrator:
    - manage_environment_templates
    - manage_environment_licenses
    - manage_email_templates
+   - edit_raw_html_block
+   - manage_email_templates

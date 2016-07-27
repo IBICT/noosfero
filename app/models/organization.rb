@@ -2,6 +2,10 @@
 class Organization < Profile
 
   attr_accessible :moderated_articles, :foundation_year, :contact_person, :acronym, :legal_form, :economic_activity, :management_information, :cnpj, :display_name, :enable_contact_us
+  attr_accessible :requires_email
+
+  settings_items :requires_email, type: :boolean
+  alias_method :requires_email?, :requires_email
 
   SEARCH_FILTERS = {
     :order => %w[more_recent more_popular more_active],
@@ -9,14 +13,14 @@ class Organization < Profile
   }
 
   # An Organization is considered visible to a given person if one of the
-# following conditions are met:
-#   1) The user is an environment administrator.
-#   2) The user is an administrator of the organization.
-#   3) The user is a member of the organization and the organization is
-#   visible.
-#   4) The user is not a member of the organization but the organization is
-#   visible, public and enabled.
-  def self.visible_for_person(person)
+  # following conditions are met:
+  #   1) The user is an environment administrator.
+  #   2) The user is an administrator of the organization.
+  #   3) The user is a member of the organization and the organization is
+  #   visible.
+  #   4) The user is not a member of the organization but the organization is
+  #   visible, public and enabled.
+  def self.listed_for_person(person)
     joins('LEFT JOIN "role_assignments" ON ("role_assignments"."resource_id" = "profiles"."id"
           AND "role_assignments"."resource_type" = \'Profile\') OR (
           "role_assignments"."resource_id" = "profiles"."environment_id" AND
@@ -26,11 +30,22 @@ class Organization < Profile
       ['( (roles.key = ? OR roles.key = ?) AND role_assignments.accessor_type = ? AND role_assignments.accessor_id = ? )
         OR
         ( ( ( role_assignments.accessor_type = ? AND role_assignments.accessor_id = ? ) OR
-            ( profiles.public_profile = ? AND profiles.enabled = ? ) ) AND
+            ( profiles.enabled = ? ) ) AND
           ( profiles.visible = ? ) )',
       'profile_admin', 'environment_administrator', Profile.name, person.id,
-      Profile.name, person.id,  true, true, true]
+      Profile.name, person.id, true, true]
     ).uniq
+  end
+
+  def self.visible_for_person(person)
+    listed_for_person(person).where(
+      ['( (roles.key = ? OR roles.key = ?) AND role_assignments.accessor_type = ? AND role_assignments.accessor_id = ? )
+        OR
+        ( ( role_assignments.accessor_type = ? AND role_assignments.accessor_id = ? ) OR
+          ( profiles.enabled = ? AND profiles.public_profile = ? ) )',
+      'profile_admin', 'environment_administrator', Profile.name, person.id,
+      Profile.name, person.id,  true, true]
+    )
   end
 
   settings_items :closed, :type => :boolean, :default => false
@@ -55,7 +70,7 @@ class Organization < Profile
 
   has_many :custom_roles, :class_name => 'Role', :foreign_key => :profile_id
 
-  scope :more_popular, :order => 'members_count DESC'
+  scope :more_popular, -> { order 'members_count DESC' }
 
   validate :presence_of_required_fieds, :unless => :is_template
 
@@ -227,4 +242,7 @@ class Organization < Profile
     self.admins.where(:id => user.id).exists?
   end
 
+  def display_private_info_to?(user)
+    (public_profile && visible && !secret) || super
+  end
 end

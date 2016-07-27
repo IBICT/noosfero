@@ -4,8 +4,7 @@ require_relative '../../controllers/custom_forms_plugin_myprofile_controller'
 class CustomFormsPluginMyprofileControllerTest < ActionController::TestCase
   def setup
     @controller = CustomFormsPluginMyprofileController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
+
     @profile = create_user('profile').person
     login_as(@profile.identifier)
     environment = Environment.default
@@ -54,7 +53,7 @@ class CustomFormsPluginMyprofileControllerTest < ActionController::TestCase
             },
             2 => {
               :name => 'Color',
-              :select_field_type => 'radio',
+              :show_as => 'radio',
               :type => 'CustomFormsPlugin::SelectField',
               :alternatives_attributes => {
                 1 => {:label => 'Red'},
@@ -66,7 +65,7 @@ class CustomFormsPluginMyprofileControllerTest < ActionController::TestCase
         }
     end
 
-    form = CustomFormsPlugin::Form.find_by_name('My Form')
+    form = CustomFormsPlugin::Form.find_by(name: 'My Form')
     assert_equal 'logged', form.access
     assert_equal begining, form.begining.strftime(format)
     assert_equal ending, form.ending.strftime(format)
@@ -82,7 +81,7 @@ class CustomFormsPluginMyprofileControllerTest < ActionController::TestCase
 
     assert_equal 'Color', f2.name
     assert_equal f2.alternatives.map(&:label).sort, ['Red', 'Blue', 'Black'].sort
-    assert_equal f2.select_field_type, 'radio'
+    assert_equal f2.show_as, 'radio'
     assert f2.kind_of?(CustomFormsPlugin::SelectField)
   end
 
@@ -110,7 +109,7 @@ class CustomFormsPluginMyprofileControllerTest < ActionController::TestCase
         :fields_attributes => fields
       }
     end
-    form = CustomFormsPlugin::Form.find_by_name('My Form')
+    form = CustomFormsPlugin::Form.find_by(name: 'My Form')
     assert_equal num_fields, form.fields.count
     lst = 10
     form.fields.each do |f|
@@ -147,7 +146,7 @@ class CustomFormsPluginMyprofileControllerTest < ActionController::TestCase
         :fields_attributes => fields
       }
     end
-    form = CustomFormsPlugin::Form.find_by_name('My Form')
+    form = CustomFormsPlugin::Form.find_by(name: 'My Form')
     assert_equal 2, form.fields.count
     assert form.fields.first.name == "1"
     assert form.fields.last.name == "0"

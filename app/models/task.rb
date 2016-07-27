@@ -9,9 +9,10 @@
 # This class has a +data+ field of type <tt>text</tt>, where you can store any
 # type of data (as serialized Ruby objects) you need for your subclass (which
 # will need to declare <ttserialize</tt> itself).
-class Task < ActiveRecord::Base
+class Task < ApplicationRecord
 
-  acts_as_having_settings :field => :data
+  extend ActsAsHavingSettings::ClassMethods
+  acts_as_having_settings field: :data
   acts_as_ordered_taggable
 
   module Status
@@ -31,6 +32,8 @@ class Task < ActiveRecord::Base
       [nil, N_('Active'), N_('Cancelled'), N_('Finished'), N_('Hidden')]
     end
   end
+
+  include Noosfero::Plugin::HotSpot
 
   belongs_to :requestor, :class_name => 'Profile', :foreign_key => :requestor_id
   belongs_to :target, :foreign_key => :target_id, :polymorphic => true
@@ -81,15 +84,11 @@ class Task < ActiveRecord::Base
   end
 
   def target_profile_accepts_notification?(task)
-    if target_is_profile?(task)
-      return task.target.administrator_mail_notification
+    if task.target.kind_of? Organization
+      return task.target.profile_admin_mail_notification
     else
       true
     end
-  end
-
-  def target_is_profile?(task)
-    task.target.kind_of? Profile
   end
 
   # this method finished the task. It calls #perform, which must be overriden
@@ -140,9 +139,9 @@ class Task < ActiveRecord::Base
       group = klass.to_s.downcase.pluralize
       id = attribute.to_s + "_id"
       if environment.respond_to?(group)
-        attrb = value || environment.send(group).find_by_id(record.send(id))
+        attrb = value || environment.send(group).find_by(id: record.send(id))
       else
-        attrb = value || klass.find_by_id(record.send(id))
+        attrb = value || klass.find_by(id: record.send(id))
       end
       if attrb.respond_to?(klass.to_s.downcase + "?")
         unless attrb.send(klass.to_s.downcase + "?")
@@ -211,6 +210,14 @@ class Task < ActiveRecord::Base
     true
   end
 
+  def custom_fields_moderate
+    false
+  end
+
+  def footer
+    false
+  end
+
   def icon
     {:type => :defined_image, :src => "/images/icons-app/user-minor.png", :name => requestor.name, :url => requestor.url}
   end
@@ -276,6 +283,7 @@ class Task < ActiveRecord::Base
   end
 
   def environment
+    return target if target.kind_of?(Environment)
     self.target.environment unless self.target.nil?
   end
 
@@ -316,10 +324,20 @@ class Task < ActiveRecord::Base
   scope :canceled, -> { where status: Task::Status::CANCELLED }
   scope :closed, -> { where status: [Task::Status::CANCELLED, Task::Status::FINISHED] }
   scope :opened, -> { where status: [Task::Status::ACTIVE, Task::Status::HIDDEN] }
-  scope :of, -> type { where "tasks.type LIKE ?", type if type }
-  scope :order_by, -> attribute, ord { order "#{attribute} #{ord}" }
-  scope :like, -> field, value { where "LOWER(#{field}) LIKE ?", "%#{value.downcase}%" if value }
-  scope :pending_all, -> profile, filter_type, filter_text {
+  scope :of, -> type { where :type => type  if type }
+  scope :order_by, -> attribute, ord {
+      if ord.downcase.include? 'desc'
+        order attribute.to_sym => :desc
+      else
+        order attribute.to_sym
+      end
+  }
+  scope :like, -> field, value {
+      if value
+        where "LOWER(#{field}) LIKE ?", "%#{value.downcase}%"
+      end
+  }
+  scope :pending_all_by_filter, -> profile, filter_type, filter_text {
     self.to(profile).without_spam.pending.of(filter_type).like('data', filter_text)
   }
 
@@ -328,10 +346,33 @@ class Task < ActiveRecord::Base
     if profile.person?
       envs_ids = Environment.all.select{ |env| profile.is_admin?(env) }.map{ |env| "target_id = #{env.id}"}.join(' OR ')
       environment_condition = envs_ids.blank? ? nil : "(target_type = 'Environment' AND (#{envs_ids}))"
+
+      organizations = profile.memberships.all.select do |organization| 
+        profile.has_permission?(:perform_task, organization) 
+      end
+      organization_ids = organizations.map{ |organization| "target_id = #{organization.id}"}.join(' OR ')
+
+      organization_conditions = organization_ids.blank? ? nil : "(target_type = 'Profile' AND (#{organization_ids}))"
     end
     profile_condition = "(target_type = 'Profile' AND target_id = #{profile.id})"
 
-    where [environment_condition, profile_condition].compact.join(' OR ')
+    where [environment_condition, organization_conditions, profile_condition].compact.join(' OR ')
+  }
+
+  scope :from_closed_date, -> closed_from {
+    where('tasks.end_date >= ?', closed_from.beginning_of_day) unless closed_from.blank?
+  }
+
+  scope :until_closed_date, -> closed_until {
+    where('tasks.end_date <= ?', closed_until.end_of_day) unless closed_until.blank?
+  }
+
+  scope :from_creation_date, -> created_from {
+    where('tasks.created_at >= ?', created_from.beginning_of_day) unless created_from.blank?
+  }
+
+  scope :until_creation_date, -> created_until {
+    where('tasks.created_at <= ?', created_until.end_of_day) unless created_until.blank?
   }
 
   def self.pending_types_for(profile)

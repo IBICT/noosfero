@@ -12,7 +12,7 @@ class FeedHandlerTest < ActiveSupport::TestCase
     @container ||= create(:feed_reader_block)
   end
 
-  should 'fetch feed content' do
+  should 'fetch feed content with proxy disabled and SSL enabled' do
     content = handler.fetch(container.address)
     assert_match /<description>Feed content<\/description>/, content
     assert_match /<title>Feed for unit tests<\/title>/, content
@@ -28,6 +28,7 @@ class FeedHandlerTest < ActiveSupport::TestCase
   end
 
   should 'process feed and populate container' do
+    container.stubs(:environment).returns(Environment.new)
     handler.process(container)
     assert_equal 'Feed for unit tests', container.feed_title
     assert_equivalent ["First POST", "Second POST", "Last POST"], container.feed_items.map {|item| item[:title]}
@@ -62,6 +63,7 @@ class FeedHandlerTest < ActiveSupport::TestCase
   end
 
   should 'save only latest N posts from feed' do
+    container.stubs(:environment).returns(Environment.new)
     container.limit = 1
     handler.process(container)
     assert_equal 1, container.feed_items.size
@@ -85,6 +87,7 @@ class FeedHandlerTest < ActiveSupport::TestCase
 
   should 'identifies itself as noosfero user agent' do
     handler.expects(:open).with('http://site.org/feed.xml', {"User-Agent" => "Noosfero/#{Noosfero::VERSION}"}, anything).returns('bli content')
+
     assert_equal 'bli content', handler.fetch('http://site.org/feed.xml')
   end
 
@@ -150,36 +153,73 @@ class FeedHandlerTest < ActiveSupport::TestCase
     end
   end
 
-  should 'set proxy when FEED_HTTP_PROXY is setted from env' do
-    ENV.stubs('[]').with('FEED_HTTP_PROXY').returns('http://127.0.0.1:3128')
+  should 'set proxy when http_feed_proxy is setted from env' do
+    env = Environment.new
+    env.expects(:disable_feed_ssl).returns(false)
+    env.expects(:http_feed_proxy).twice.returns('http://127.0.0.1:3128')
+
     handler.expects(:open).with('http://site.org/feed.xml', {"User-Agent" => "Noosfero/#{Noosfero::VERSION}", :proxy => 'http://127.0.0.1:3128'}, anything).returns('bli content')
-    assert_equal 'bli content', handler.fetch('http://site.org/feed.xml')
+
+    assert_equal 'bli content', handler.fetch_through_proxy('http://site.org/feed.xml', env)
   end
 
-  should 'set proxy when FEED_HTTPS_PROXY is setted from env' do
-    ENV.stubs('[]').with('FEED_HTTPS_PROXY').returns('http://127.0.0.1:3128')
+  should 'set proxy when https_feed_proxy is setted from env' do
+    env = Environment.new
+    env.expects(:disable_feed_ssl).returns(false)
+    env.expects(:https_feed_proxy).twice.returns('http://127.0.0.1:3128')
+
     handler.expects(:open).with('https://site.org/feed.xml', {"User-Agent" => "Noosfero/#{Noosfero::VERSION}", :proxy => 'http://127.0.0.1:3128'}, anything).returns('bli content')
-    assert_equal 'bli content', handler.fetch('https://site.org/feed.xml')
+
+    assert_equal 'bli content', handler.fetch_through_proxy('https://site.org/feed.xml', env)
   end
 
   should 'use https proxy for https address when both env variables were defined' do
-    ENV.stubs('[]').with('FEED_HTTPS_PROXY').returns('http://127.0.0.2:3128')
-    ENV.stubs('[]').with('FEED_HTTP_PROXY').returns('http://127.0.0.1:3128')
+    env = Environment.new
+    env.expects(:disable_feed_ssl).returns(false)
+    env.expects(:https_feed_proxy).twice.returns('http://127.0.0.2:3128')
+
     handler.expects(:open).with('https://site.org/feed.xml', {"User-Agent" => "Noosfero/#{Noosfero::VERSION}", :proxy => 'http://127.0.0.2:3128'}, anything).returns('bli content')
-    assert_equal 'bli content', handler.fetch('https://site.org/feed.xml')
+
+    assert_equal 'bli content', handler.fetch_through_proxy('https://site.org/feed.xml', env)
   end
 
   should 'use http proxy for http address when both env variables were defined' do
-    ENV.stubs('[]').with('FEED_HTTPS_PROXY').returns('http://127.0.0.2:3128')
-    ENV.stubs('[]').with('FEED_HTTP_PROXY').returns('http://127.0.0.1:3128')
+    env = Environment.new
+    env.expects(:disable_feed_ssl).returns(false)
+    env.expects(:http_feed_proxy).twice.returns('http://127.0.0.1:3128')
+
     handler.expects(:open).with('http://site.org/feed.xml', {"User-Agent" => "Noosfero/#{Noosfero::VERSION}", :proxy => 'http://127.0.0.1:3128'}, anything).returns('bli content')
-    assert_equal 'bli content', handler.fetch('http://site.org/feed.xml')
+
+    assert_equal 'bli content', handler.fetch_through_proxy('http://site.org/feed.xml', env)
   end
 
   should 'not verify ssl when define env parameter SSL_VERIFY_NONE' do
-    ENV.stubs('[]').with('SSL_VERIFY_NONE').returns(true)
+    env = Environment.new
+    env.expects(:disable_feed_ssl).returns(true)
+
     handler.expects(:open).with('http://site.org/feed.xml', {"User-Agent" => "Noosfero/#{Noosfero::VERSION}", :ssl_verify_mode => OpenSSL::SSL::VERIFY_NONE}, anything)
-    handler.fetch('http://site.org/feed.xml')
+
+    handler.fetch_through_proxy('http://site.org/feed.xml', env)
+  end
+
+  [:external_feed, :feed_reader_block].each do |container_class|
+    should "not use proxy settings for #{container_class} from one environment on another" do
+      one = create(:environment)
+      one.expects(:enable_feed_proxy).returns(true)
+      container_one = create(container_class)
+      container_one.stubs(:environment).returns(one)
+
+      handler.expects(:fetch_through_proxy).with(container_one.address, one)
+      handler.process(container_one)
+
+      another = create(:environment)
+      another.expects(:enable_feed_proxy).returns(false)
+      container_another = create(container_class)
+      container_another.stubs(:environment).returns(another)
+
+      handler.expects(:fetch_through_proxy).never.with(container_another.address, another)
+      handler.process(container_another)
+    end
   end
 
 end

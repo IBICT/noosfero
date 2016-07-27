@@ -1,5 +1,7 @@
 
-class Article < ActiveRecord::Base
+class Article < ApplicationRecord
+
+  include SanitizeHelper
 
   attr_accessible :name, :body, :abstract, :profile, :tag_list, :parent,
                   :allow_members_to_edit, :translation_of_id, :language,
@@ -8,10 +10,13 @@ class Article < ActiveRecord::Base
                   :accept_comments, :feed, :published, :source, :source_name,
                   :highlighted, :notify_comments, :display_hits, :slug,
                   :external_feed_builder, :display_versions, :external_link,
-                  :author, :published_at, :person_followers, :show_to_followers, 
-                  :image_builder, :display_preview, :archived
+                  :image_builder, :show_to_followers, :archived,
+                  :author, :display_preview, :published_at, :person_followers
 
+  extend ActsAsHavingImage::ClassMethods
   acts_as_having_image
+
+  include Noosfero::Plugin::HotSpot
 
   SEARCHABLE_FIELDS = {
     :name => {:label => _('Name'), :weight => 10},
@@ -26,19 +31,17 @@ class Article < ActiveRecord::Base
     :display => %w[full]
   }
 
+  N_('article')
+
   def initialize(*params)
     super
-
-    if !params.blank?
-      if params.first.has_key?(:profile) && !params.first[:profile].blank?
-        profile = params.first[:profile]
-        self.published = false unless profile.public_profile
+    if params.present? && params.first.present?
+      if params.first.symbolize_keys.has_key?(:published)
+        self.published = params.first.symbolize_keys[:published]
+      elsif params.first[:profile].present? && !params.first[:profile].public_profile
+        self.published = false
       end
-
-      self.published = params.first["published"] if params.first.has_key?("published")
-      self.published = params.first[:published] if params.first.has_key?(:published)
     end
-
   end
 
   def self.default_search_display
@@ -57,6 +60,7 @@ class Article < ActiveRecord::Base
   track_actions :create_article, :after_create, :keep_params => [:name, :url, :lead, :first_image], :if => Proc.new { |a| a.is_trackable? && !a.image? }
 
   # xss_terminate plugin can't sanitize array fields
+  # sanitize_tag_list is used with SanitizeHelper
   before_save :sanitize_tag_list
 
   before_create do |article|
@@ -77,11 +81,11 @@ class Article < ActiveRecord::Base
   belongs_to :last_changed_by, :class_name => 'Person', :foreign_key => 'last_changed_by_id'
   belongs_to :created_by, :class_name => 'Person', :foreign_key => 'created_by_id'
 
-  #Article followers relation
+  has_many :comments, -> { order 'created_at asc' }, class_name: 'Comment', as: 'source', dependent: :destroy
+
   has_many :article_followers, :dependent => :destroy
   has_many :person_followers, :class_name => 'Person', :through => :article_followers, :source => :person
-
-  has_many :comments, :class_name => 'Comment', :foreign_key => 'source_id', :dependent => :destroy, :order => 'created_at asc'
+  has_many :person_followers_emails, -> { select :email }, class_name: 'User', through: :person_followers, source: :user
 
   has_many :article_categorizations, -> { where 'articles_categories.virtual = ?', false }
   has_many :categories, :through => :article_categorizations
@@ -89,13 +93,13 @@ class Article < ActiveRecord::Base
   has_many :article_categorizations_including_virtual, :class_name => 'ArticleCategorization'
   has_many :categories_including_virtual, :through => :article_categorizations_including_virtual, :source => :category
 
-  acts_as_having_settings :field => :setting
+  extend ActsAsHavingSettings::ClassMethods
+  acts_as_having_settings field: :setting
 
   settings_items :display_hits, :type => :boolean, :default => true
   settings_items :author_name, :type => :string, :default => ""
   settings_items :allow_members_to_edit, :type => :boolean, :default => false
   settings_items :moderate_comments, :type => :boolean, :default => false
-  settings_items :followers, :type => Array, :default => []
   has_and_belongs_to_many :article_privacy_exceptions, :class_name => 'Person', :join_table => 'article_privacy_exceptions'
 
   belongs_to :reference_article, :class_name => "Article", :foreign_key => 'reference_article_id'
@@ -173,7 +177,6 @@ class Article < ActiveRecord::Base
     end
   end
 
-
   def is_trackable?
     self.published? && self.notifiable? && self.advertise? && self.profile.public_profile
   end
@@ -242,6 +245,7 @@ class Article < ActiveRecord::Base
   acts_as_taggable
   N_('Tag list')
 
+  extend ActsAsFilesystem::ActsMethods
   acts_as_filesystem
 
   acts_as_versioned
@@ -286,7 +290,7 @@ class Article < ActiveRecord::Base
   # retrives the most commented articles, sorted by the comment count (largest
   # first)
   def self.most_commented(limit)
-    paginate(:order => 'comments_count DESC', :page => 1, :per_page => limit)
+    order('comments_count DESC').paginate(page: 1, per_page: limit)
   end
 
   scope :more_popular, -> { order 'hits DESC' }
@@ -295,7 +299,7 @@ class Article < ActiveRecord::Base
   }
 
   def self.recent(limit = nil, extra_conditions = {}, pagination = true)
-    result = scoped({:conditions => extra_conditions}).
+    result = where(extra_conditions).
       is_public.
       relevant_as_recent.
       limit(limit).
@@ -374,6 +378,10 @@ class Article < ActiveRecord::Base
     self.parent and self.parent.forum?
   end
 
+  def person_followers_email_list
+    person_followers_emails.map{|p|p.email}
+  end
+
   def info_from_last_update
     last_comment = comments.last
     if last_comment
@@ -381,6 +389,10 @@ class Article < ActiveRecord::Base
     else
       {:date => updated_at, :author_name => author_name, :author_url => author_url}
     end
+  end
+
+  def full_path
+    profile.hostname.blank? ? "/#{profile.identifier}/#{path}" : "/#{path}"
   end
 
   def url
@@ -408,13 +420,19 @@ class Article < ActiveRecord::Base
   end
 
   def download? view = nil
-    (self.uploaded_file? and not self.image?) or
-      (self.image? and view.blank?) or
-      (not self.uploaded_file? and self.mime_type != 'text/html')
+    false
+  end
+
+  def is_followed_by?(user)
+    self.person_followers.include? user
+  end
+
+  def download_disposition
+    'inline'
   end
 
   def download_headers
-    {}
+    { :filename => filename, :type => mime_type, :disposition => download_disposition}
   end
 
   def alternate_languages
@@ -463,7 +481,7 @@ class Article < ActiveRecord::Base
 
   def rotate_translations
     unless self.translations.empty?
-      rotate = self.translations.all
+      rotate = self.translations.to_a
       root = rotate.shift
       root.update_attribute(:translation_of_id, nil)
       root.translations = rotate
@@ -520,13 +538,13 @@ class Article < ActiveRecord::Base
 
   scope :display_filter, lambda {|user, profile|
     return published if (user.nil? && profile && profile.public?)
-    return [] if user.nil? || (profile && !profile.public? && !user.follows?(profile))
+    return [] if user.nil? || (profile && !profile.public? && !profile.in_social_circle?(user))
     where(
       [
        "published = ? OR last_changed_by_id = ? OR profile_id = ? OR ?
         OR  (show_to_followers = ? AND ? AND profile_id IN (?))", true, user.id, user.id,
         profile.nil? ?  false : user.has_permission?(:view_private_content, profile),
-        true, (profile.nil? ? true : user.follows?(profile)),  ( profile.nil? ? (user.friends.select('profiles.id')) : [profile.id])
+        true, (profile.nil? ? true : profile.in_social_circle?(user)),  ( profile.nil? ? (user.friends.select('profiles.id')) : [profile.id])
       ]
     )
   }
@@ -553,7 +571,7 @@ class Article < ActiveRecord::Base
 
   def allow_post_content?(user = nil)
     return true if allow_edit_topic?(user)
-    user && (user.has_permission?('post_content', profile) || allow_publish_content?(user) && (user == author))
+    user && (profile.allow_post_content?(user) || allow_publish_content?(user) && (user == author))
   end
 
   def allow_publish_content?(user = nil)
@@ -592,7 +610,7 @@ class Article < ActiveRecord::Base
   end
 
   def accept_category?(cat)
-    !cat.is_a?(ProductCategory)
+    true
   end
 
   def public?
@@ -757,7 +775,7 @@ class Article < ActiveRecord::Base
 
   def version_license(version_number = nil)
     return license if version_number.nil?
-    profile.environment.licenses.find_by_id(get_version(version_number).license_id)
+    profile.environment.licenses.find_by(id: get_version(version_number).license_id)
   end
 
   alias :active_record_cache_key :cache_key
@@ -794,11 +812,13 @@ class Article < ActiveRecord::Base
   end
 
   def body_images_paths
-    Nokogiri::HTML.fragment(self.body.to_s).css('img[src]').collect do |i|
+    paths = Nokogiri::HTML.fragment(self.body.to_s).css('img[src]').collect do |i|
       src = i['src']
       src = URI.escape src if self.new_record? # xss_terminate runs on save
       (self.profile && self.profile.environment) ? URI.join(self.profile.environment.top_url, src).to_s : src
     end
+    paths.unshift(URI.join(self.profile.environment.top_url, self.image.public_filename).to_s) if self.image.present?
+    paths
   end
 
   def more_comments_label
@@ -846,12 +866,17 @@ class Article < ActiveRecord::Base
     true
   end
 
+  # FIXME see if it's needed
   def view_page
     "content_viewer/view_page"
   end
 
   def to_liquid
     HashWithIndifferentAccess.new :name => name, :abstract => abstract, :body => body, :id => id, :parent_id => parent_id, :author => author
+  end
+
+  def self.can_display_blocks?
+    true
   end
 
   private
@@ -863,11 +888,6 @@ class Article < ActiveRecord::Base
 
   def strip_tag_name(tag_name)
     tag_name.gsub(/[<>]/, '')
-  end
-
-  def sanitize_html(text)
-    sanitizer = HTML::FullSanitizer.new
-    sanitizer.sanitize(text)
   end
 
   def parent_archived?

@@ -13,6 +13,10 @@ class Noosfero::Plugin
     context.environment if self.context
   end
 
+  def profile
+    context.send :profile if self.context
+  end
+
   class << self
 
     include Noosfero::Plugin::ParentMethods
@@ -149,7 +153,7 @@ class Noosfero::Plugin
 
     def load_plugin_extensions(dir)
       ActionDispatch::Reloader.to_prepare do
-        Dir[File.join(dir, 'lib', 'ext', '*.rb')].each{ |file| require_dependency file }
+        Dir[File.join(dir, 'lib', 'ext', '**', '*.rb')].each{ |file| require_dependency file }
       end
     end
 
@@ -233,7 +237,7 @@ class Noosfero::Plugin
       type = type.map do |x|
         x.is_a?(String) ? x.capitalize.constantize : x
       end
-      raise "This is not a valid type" if !type.empty? && ![Person, Community, Enterprise, Environment].detect{|m| type.include?(m)}
+      raise "This is not a valid type" if !type.empty? && (type.any?{|t| !(t < Profile) && t != Environment })
 
       position = options[:position]
       position = position.is_a?(Array) ? position : [position].compact
@@ -661,7 +665,7 @@ class Noosfero::Plugin
   end
 
   # -> Perform extra transactions related to profile in profile editor
-  # returns = true in success or raise and exception if it could not update the data
+  # returns = true in success or raise an exception if it could not update the data
   def profile_editor_transaction_extras
     nil
   end
@@ -679,7 +683,7 @@ class Noosfero::Plugin
   end
 
   #By default will return nil that will mean not implented by the plugin
-  def test_captcha(*args)
+  def verify_captcha(*args)
     nil
   end
 
@@ -737,6 +741,10 @@ class Noosfero::Plugin
     {}
   end
 
+  def api_custom_login request
+    nil
+  end
+
   def method_missing(method, *args, &block)
     # This is a generic hotspot for all controllers on Noosfero.
     # If any plugin wants to define filters to run on any controller, the name of
@@ -761,6 +769,10 @@ class Noosfero::Plugin
     # -> Expire the action button from the content
     # returns = string with reason of expiration
     elsif method.to_s =~ /^content_expire_(#{content_actions.join('|')})$/
+      nil
+    # -> Generic hotspots for models callbacks
+    # Example: article_after_create_callback
+    elsif method.to_s =~ /^(.+)_#{Noosfero::Plugin::HotSpot::CALLBACK_HOTSPOTS.join('|')}_callback$/
       nil
     elsif context.respond_to?(method)
       context.send(method, *args)

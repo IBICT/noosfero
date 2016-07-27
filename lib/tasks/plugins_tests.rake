@@ -9,7 +9,7 @@ $broken_plugins = %w[
 @all_plugins = Dir.glob('plugins/*').map { |f| File.basename(f) } - ['template']
 @all_plugins.sort!
 
-@all_tasks = [:units, :functionals, :integration, :cucumber, :selenium]
+@all_tasks = [:units, :api, :functionals, :integration, :cucumber, :selenium]
 
 def enabled_plugins
   Dir.glob('{baseplugins,config/plugins}/*').map { |f| File.basename(f) } - ['README']
@@ -25,7 +25,7 @@ def enable_plugins(plugins)
   plugins = Array(plugins)
   command = ['./script/noosfero-plugins', '-q', 'enable', *plugins]
   puts plugins.join(' ')
-  system *command
+  Bundler.clean_system *command
 end
 
 def disable_plugins(plugins = '*')
@@ -87,6 +87,8 @@ def task2folder(task)
   result = case task.to_sym
   when :units
     :unit
+  when :api
+    :api
   when :functionals
     :functional
   when :integration
@@ -215,7 +217,14 @@ namespace :test do
 
   desc "Run all tests for all plugins"
   task :noosfero_plugins do
-    test_sequence(@all_plugins - $broken_plugins, @all_tasks) do |failed|
+    plugins    = @all_plugins - $broken_plugins
+    if slice   = ENV['SLICE']
+      sel,size = slice.split '/'
+      size     = (plugins.size / size.to_f).ceil
+      plugins  = plugins.each_slice(size).to_a[sel.to_i - 1]
+    end
+
+    test_sequence plugins, @all_tasks do |failed|
       plugins_status_report(failed)
     end
   end
@@ -233,8 +242,10 @@ def plugins_status_report(failed)
 
   @all_plugins.each do |plugin|
     if $broken_plugins.include?(plugin)
+      status = "BROKEN"
+    elsif failed[plugin].nil?
       status = "SKIP"
-    elsif !failed[plugin] || failed[plugin].empty?
+    elsif failed[plugin].empty?
       status = "PASS"
     else
       status = "FAIL: #{failed[plugin].join(', ')}"

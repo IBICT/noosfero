@@ -113,7 +113,7 @@
     accept_container.show('fast');
     reject_container.hide('fast');
     $('#on-skip-information-'   + task_id).hide('fast');
-
+    $('#custom-field-information-' + task_id).show('fast');
     reject_container.find('input, select').prop('disabled', true);
     accept_container.find('input, select').prop('disabled', false);
   })
@@ -126,7 +126,7 @@
     accept_container.hide('fast');
     reject_container.show('fast');
     $('#on-skip-information-'   + task_id).hide('fast');
-
+    $('#custom-field-information-' + task_id).show('fast');
     reject_container.find('input, select').prop('disabled', false);
     accept_container.find('input, select').prop('disabled', true);
   })
@@ -136,6 +136,7 @@
     $('#on-accept-information-' + task_id).hide('fast');
     $('#on-reject-information-' + task_id).hide('fast');
     $('#on-skip-information-'   + task_id).show('fast');
+    $('#custom-field-information-' + task_id).hide('fast');
   })
 
   // There is probably an elegant way to do this...

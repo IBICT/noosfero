@@ -1,12 +1,21 @@
 # A Profile is the representation and web-presence of an individual or an
 # organization. Every Profile is attached to its Environment of origin,
 # which by default is the one returned by Environment:default.
-class Profile < ActiveRecord::Base
+class Profile < ApplicationRecord
 
-  attr_accessible :name, :identifier, :public_profile, :nickname, :custom_footer, :custom_header, :address, :zip_code, :contact_phone, :image_builder, :description, :closed, :template_id, :environment, :lat, :lng, :is_template, :fields_privacy, :preferred_domain_id, :category_ids, :country, :city, :state, :national_region_code, :email, :contact_email, :redirect_l10n, :notification_time,
-    :redirection_after_login, :custom_url_redirection,
-    :email_suggestions, :allow_members_to_invite, :invite_friends_only, :secret,
-    :custom_fields, :administrator_mail_notification, :region, :region_id
+  attr_accessible :name, :identifier, :public_profile, :nickname, :custom_footer, :custom_header, :address, :zip_code, 
+      :contact_phone, :image_builder, :description, :closed, :template_id, :environment, :lat, :lng, :is_template, 
+      :fields_privacy, :preferred_domain_id, :category_ids, :country, :city, :state, :national_region_code, :email, 
+      :contact_email, :redirect_l10n, :notification_time, :redirection_after_login, :custom_url_redirection, 
+      :email_suggestions, :allow_members_to_invite, :invite_friends_only, :secret, :profile_admin_mail_notification,
+      :custom_fields, :region, :region_id, :allow_followers
+
+  extend ActsAsHavingSettings::ClassMethods
+  acts_as_having_settings field: :data
+
+  def settings
+    data
+  end
 
   # use for internationalizable human type names in search facets
   # reimplement on subclasses
@@ -78,6 +87,12 @@ class Profile < ActiveRecord::Base
     def self.organization_member_roles(env_id)
       all_roles(env_id).select{ |r| r.key.match(/^profile_/) unless r.key.blank? || !r.profile_id.nil?}
     end
+    def self.organization_custom_roles(env_id, profile_id)
+      all_roles(env_id).where('profile_id = ?', profile_id)
+    end
+    def self.organization_roles(env_id, profile_id)
+      all_roles(env_id).where("profile_id = ?  or key like 'profile_%'", profile_id)
+    end
     def self.all_roles(env_id)
       Role.where(environment_id: env_id)
     end
@@ -88,7 +103,7 @@ class Profile < ActiveRecord::Base
     end
     private
     def self.find_role(name, env_id)
-      ::Role.find_by_key_and_environment_id("profile_#{name}", env_id)
+      ::Role.find_by key: "profile_#{name}", environment_id: env_id
     end
   end
 
@@ -114,12 +129,14 @@ class Profile < ActiveRecord::Base
   }
 
   acts_as_accessible
+
+  include Customizable
   acts_as_customizable
 
   include Noosfero::Plugin::HotSpot
 
   scope :memberships_of, -> person {
-    select('DISTINCT profiles.*').
+    distinct.select('profiles.*').
     joins(:role_assignments).
     where('role_assignments.accessor_type = ? AND role_assignments.accessor_id = ?', person.class.base_class.name, person.id)
   }
@@ -140,6 +157,9 @@ class Profile < ActiveRecord::Base
     where template_id: templates
   }
   scope :no_templates, -> { where is_template: false }
+
+  scope :recent, -> limit=nil { order('id DESC').limit(limit) }
+
 
   # Returns a scoped object to select profiles in a given location or in a radius
   # distance from the given location center.
@@ -185,29 +205,44 @@ class Profile < ActiveRecord::Base
 
   include TimeScopes
 
-  def members
+  def members(by_field = '')
     scopes = plugins.dispatch_scopes(:organization_members, self)
-    scopes << Person.members_of(self)
+    scopes << Person.members_of(self,by_field)
     return scopes.first if scopes.size == 1
     ScopeTool.union *scopes
   end
 
-  def members_by_name
-    members.order('profiles.name')
+  def members_by(field,value = nil)
+    if value and !value.blank?
+      members_like(field,value).order('profiles.name')
+    else
+      members.order('profiles.name')
+    end
   end
 
-  class << self
-    def count_with_distinct(*args)
-      options = args.last || {}
-      count_without_distinct(:id, {:distinct => true}.merge(options))
-    end
-    alias_method_chain :count, :distinct
+  def members_like(field,value)
+    members(field).where("LOWER(#{field}) LIKE ?", "%#{value.downcase}%") if value
   end
 
   def members_by_role(roles)
     Person.members_of(self).by_role(roles)
   end
 
+  extend ActsAsHavingSettings::ClassMethods
+  acts_as_having_settings field: :data
+
+  def settings
+    data
+  end
+
+  settings_items :redirect_l10n, :type => :boolean, :default => false
+  settings_items :public_content, :type => :boolean, :default => true
+  settings_items :description
+  settings_items :fields_privacy, :type => :hash, :default => {}
+  settings_items :email_suggestions, :type => :boolean, :default => false
+  settings_items :profile_admin_mail_notification, :type => :boolean, :default => true
+
+  extend ActsAsHavingBoxes::ClassMethods
   acts_as_having_boxes
 
   acts_as_taggable
@@ -221,23 +256,42 @@ class Profile < ActiveRecord::Base
   scope :is_public, -> { where visible: true, public_profile: true, secret: false }
   scope :enabled, -> { where enabled: true }
 
-  # Subclasses must override this method
-  scope :more_popular
+  # subclass specific
+  scope :more_popular, -> { }
+  scope :more_active, -> { order 'activities_count DESC' }
+  scope :more_recent, -> { order "created_at DESC" }
 
-  scope :more_active,  :order => 'activities_count DESC'
-  scope :more_recent, :order => "created_at DESC"
+  scope :followed_by, -> person{
+    distinct.select('profiles.*').
+    joins('left join profiles_circles ON profiles_circles.profile_id = profiles.id').
+    joins('left join circles ON circles.id = profiles_circles.circle_id').
+    where('circles.person_id = ?', person.id)
+  }
+
+  scope :in_circle, -> circle{
+    distinct.select('profiles.*').
+    joins('left join profiles_circles ON profiles_circles.profile_id = profiles.id').
+    joins('left join circles ON circles.id = profiles_circles.circle_id').
+    where('circles.id = ?', circle.id)
+  }
+
+  settings_items :allow_followers, :type => :boolean, :default => true
+  alias_method :allow_followers?, :allow_followers
 
   acts_as_trackable :dependent => :destroy
 
   has_many :profile_activities
   has_many :action_tracker_notifications, :foreign_key => 'profile_id'
-  has_many :tracked_notifications, :through => :action_tracker_notifications, :source => :action_tracker, :order => 'updated_at DESC'
-  has_many :scraps_received, :class_name => 'Scrap', :foreign_key => :receiver_id, :order => "updated_at DESC", :dependent => :destroy
+  has_many :tracked_notifications, -> { order 'updated_at DESC' }, through: :action_tracker_notifications, source: :action_tracker
+  has_many :scraps_received, -> { order 'updated_at DESC' }, class_name: 'Scrap', foreign_key: :receiver_id, dependent: :destroy
   belongs_to :template, :class_name => 'Profile', :foreign_key => 'template_id'
 
   has_many :comments_received, :class_name => 'Comment', :through => :articles, :source => :comments
 
   has_many :email_templates, :foreign_key => :owner_id
+
+  has_many :profile_followers
+  has_many :followers, -> { uniq }, :class_name => 'Person', :through => :profile_followers, :source => :person
 
   # Although this should be a has_one relation, there are no non-silly names for
   # a foreign key on article to reference the template to which it is
@@ -254,19 +308,6 @@ class Profile < ActiveRecord::Base
     scrap = scrap.is_a?(Scrap) ? scrap.id : scrap
     scrap.nil? ? Scrap.all_scraps(self) : Scrap.all_scraps(self).find(scrap)
   end
-
-  acts_as_having_settings :field => :data
-
-  def settings
-    data
-  end
-
-  settings_items :redirect_l10n, :type => :boolean, :default => false
-  settings_items :public_content, :type => :boolean, :default => true
-  settings_items :description
-  settings_items :fields_privacy, :type => :hash, :default => {}
-  settings_items :email_suggestions, :type => :boolean, :default => false
-  settings_items :administrator_mail_notification, :type => :boolean, :default => true
 
   validates_length_of :description, :maximum => 550, :allow_nil => true
 
@@ -309,11 +350,12 @@ class Profile < ActiveRecord::Base
 
   has_many :files, :class_name => 'UploadedFile'
 
+  extend ActsAsHavingImage::ClassMethods
   acts_as_having_image
 
   has_many :tasks, :dependent => :destroy, :as => 'target'
 
-  has_many :events, :source => 'articles', :class_name => 'Event', :order => 'start_date'
+  has_many :events, -> { order 'start_date' }, source: 'articles', class_name: 'Event'
 
   def find_in_all_tasks(task_id)
     begin
@@ -577,7 +619,7 @@ class Profile < ActiveRecord::Base
     #  person = Profile['username']
     #  org = Profile.['orgname']
     def [](identifier)
-      self.find_by_identifier(identifier)
+      self.find_by identifier: identifier
     end
 
   end
@@ -670,7 +712,7 @@ class Profile < ActiveRecord::Base
     url << url_options[:host]
     url << ':' << url_options[:port].to_s if url_options.key?(:port)
     url << Noosfero.root('')
-    url
+    url.html_safe
   end
 
 private :generate_url, :url_options
@@ -756,11 +798,11 @@ private :generate_url, :url_options
 
   def copy_article_tree(article, parent=nil)
     return if !copy_article?(article)
-    original_article = self.articles.find_by_name(article.name)
+    original_article = self.articles.find_by name: article.name
     if original_article
       num = 2
       new_name = original_article.name + ' ' + num.to_s
-      while self.articles.find_by_name(new_name)
+      while self.articles.find_by name: new_name
         num = num + 1
         new_name = original_article.name + ' ' + num.to_s
       end
@@ -781,13 +823,14 @@ private :generate_url, :url_options
   end
 
   # Adds a person as member of this Profile.
-  def add_member(person)
-    if self.has_members?
+  def add_member(person, attributes={})
+    if self.has_members? && !self.secret
       if self.closed? && members.count > 0
         AddMember.create!(:person => person, :organization => self) unless self.already_request_membership?(person)
       else
-        self.affiliate(person, Profile::Roles.admin(environment.id)) if members.count == 0
-        self.affiliate(person, Profile::Roles.member(environment.id))
+        self.affiliate(person, Profile::Roles.admin(environment.id), attributes) if members.count == 0
+        self.affiliate(person, Profile::Roles.member(environment.id), attributes)
+        person.follow(self, Circle.find_or_create_by(:person => person, :name =>_('memberships'), :profile_type => 'Community'))
       end
       person.tasks.pending.of("InviteMember").select { |t| t.data[:community_id] == self.id }.each { |invite| invite.cancel }
       remove_from_suggestion_list person
@@ -840,10 +883,6 @@ private :generate_url, :url_options
     end
   end
 
-  def self.recent(limit = nil)
-    self.find(:all, :order => 'id desc', :limit => limit)
-  end
-
   # returns +true+ if the given +user+ can see profile information about this
   # +profile+, and +false+ otherwise.
   def display_info_to?(user)
@@ -863,7 +902,7 @@ private :generate_url, :url_options
   end
 
   def accept_category?(cat)
-    forbidden = [ ProductCategory, Region ]
+    forbidden = [ Region ]
     !forbidden.include?(cat.class)
   end
 
@@ -937,7 +976,7 @@ private :generate_url, :url_options
   has_many :blogs, :source => 'articles', :class_name => 'Blog'
 
   def blog
-    self.has_blog? ? self.blogs.first(:order => 'id') : nil
+    self.has_blog? ? self.blogs.order(:id).first : nil
   end
 
   def has_blog?
@@ -947,7 +986,7 @@ private :generate_url, :url_options
   has_many :forums, :source => 'articles', :class_name => 'Forum'
 
   def forum
-    self.has_forum? ? self.forums.first(:order => 'id') : nil
+    self.has_forum? ? self.forums.order(:id).first : nil
   end
 
   def has_forum?
@@ -1144,6 +1183,11 @@ private :generate_url, :url_options
     self.data[:fields_privacy]
   end
 
+  # abstract
+  def active_fields
+    []
+  end
+
   def public_fields
     self.active_fields
   end
@@ -1153,7 +1197,11 @@ private :generate_url, :url_options
   end
 
   def followed_by?(person)
-    person.is_member_of?(self)
+    (person == self) || (person.in? self.followers)
+  end
+
+  def in_social_circle?(person)
+    (person == self) || (person.is_member_of?(self))
   end
 
   def display_private_info_to?(user)
@@ -1164,6 +1212,10 @@ private :generate_url, :url_options
     end
   end
 
+  def can_view_field? current_person, field
+    display_private_info_to?(current_person) || (public_fields.include?(field) && public?)
+  end
+
   validates_inclusion_of :redirection_after_login, :in => Environment.login_redirection_options.keys, :allow_nil => true
   def preferred_login_redirection
     redirection_after_login.blank? ? environment.redirection_after_login : redirection_after_login
@@ -1171,7 +1223,7 @@ private :generate_url, :url_options
   settings_items :custom_url_redirection, type: String, default: nil
 
   def remove_from_suggestion_list(person)
-    suggestion = person.suggested_profiles.find_by_suggestion_id self.id
+    suggestion = person.suggested_profiles.find_by suggestion_id: self.id
     suggestion.disable if suggestion
   end
 
@@ -1179,4 +1231,19 @@ private :generate_url, :url_options
     false
   end
 
+  def allow_post_content?(person = nil)
+    person.kind_of?(Profile) && person.has_permission?('post_content', self)
+  end
+
+  def allow_edit?(person = nil)
+    person.kind_of?(Profile) && person.has_permission?('edit_profile', self)
+  end
+
+  def allow_destroy?(person = nil)
+    person.kind_of?(Profile) && person.has_permission?('destroy_profile', self)
+  end
+
+  def in_circle?(circle, follower)
+    ProfileFollower.with_follower(follower).with_circle(circle).with_profile(self).present?
+  end
 end

@@ -5,7 +5,6 @@
 <%= required labelled_form_field _('Name'), f.text_field(:name) %>
 <%= labelled_form_field(_('What is the time limit for this form to be filled?'), (
   date_range_field('form[begining]', 'form[ending]', @form.begining, @form.ending,
-                   '%Y/%m/%d %H:%M',
                    { :time => true, :change_month => true, :change_year => true,
                      :date_format => 'yy-mm-dd', :time_format => 'hh:mm' },
                      { :size => 14 })
@@ -52,11 +51,11 @@
 </ul>
 
 <div class="addition-buttons">
-  <%= button(:add, _('Add a new text field'), '#', :onclick => "customFormsPlugin.addFields(this, 'fields', #{CGI::escapeHTML(html_for_field(f, :fields, CustomFormsPlugin::TextField).to_json)}); return false")%>
-  <%= button(:add, _('Add a new select field'), '#', :onclick => "customFormsPlugin.addFields(this, 'fields', #{CGI::escapeHTML(html_for_field(f, :fields, CustomFormsPlugin::SelectField).to_json)}); return false")%>
+  <%= button(:add, _('Add a new text field'), '#', :onclick => "customFormsPlugin.addFields(this, 'fields', #{html_for_field(f, :fields, CustomFormsPlugin::TextField).to_json}); return false")%>
+  <%= button(:add, _('Add a new select field'), '#', :onclick => "customFormsPlugin.addFields(this, 'fields', #{html_for_field(f, :fields, CustomFormsPlugin::SelectField).to_json}); return false")%>
 </div>
 
-<% button_bar do %>
+<%= button_bar do %>
   <%= submit_button :save, c_('Save'), :cancel => {:action => 'index'}%>
 <% end %>
 

@@ -7,7 +7,7 @@
 
 require 'uri'
 require 'cgi'
-require File.expand_path(File.join(File.dirname(__FILE__), "..", "support", "paths"))
+require_relative '../support/paths'
 
 module WithinHelpers
   def with_scope(locator)
@@ -39,37 +39,15 @@ end
 
 When /^(?:|I )follow "([^"]*)"(?: within "([^"]*)")?$/ do |link, selector|
   with_scope(selector) do
-    begin
-      click_link(link, :match => :prefer_exact)
-    rescue Selenium::WebDriver::Error::UnknownError => selenium_error
-      if selenium_error.message.start_with? 'Element is not clickable at point'
-        link = find_link(link)
-        href = link[:href]
-        onclick = link[:onClick]
-
-        warn "#{selenium_error.message}\n\n"\
-             "Trying to overcome this by:\n"
-
-        onclick_return = true
-
-        unless onclick.nil?
-          warn "\t* Running onClick JS:\n"\
-               "\t\t'#{onclick}'\n"
-          onclick_return = page.execute_script onclick
-        end
-
-        if onclick_return
-          warn "\t* Redirecting you to the link's href:\n"\
-               "\t\t'#{href}'\n"
-
-          visit href
-        end
-
-        warn "\nGood luck and be careful that this may produce hidden links to work on tests!\n"
-      else
-        raise selenium_error
-      end
+    link   = find :link_or_button, link, match: :prefer_exact
+    # If the link has child elements, then $(link).click() has no effect,
+    # so find the first child and click on it.
+    if Capybara.default_driver == :selenium
+      target = link.all('*').first || link
+    else
+      target = link
     end
+    target.click
   end
 end
 
@@ -226,7 +204,7 @@ Then /^the "([^"]*)" field(?: within "([^"]*)")? should not contain "([^"]*)"$/ 
   end
 end
 
-Then /^the "([^"]*)" checkbox(?: within "([^"]*)")? should be checked$/ do |label, selector|
+Then /^the "([^"]*)" (?:checkbox|radio button)(?: within "([^"]*)")? should be checked$/ do |label, selector|
   with_scope(selector) do
     field_checked = find_field(label)['checked']
     if field_checked.respond_to? :should
@@ -237,7 +215,7 @@ Then /^the "([^"]*)" checkbox(?: within "([^"]*)")? should be checked$/ do |labe
   end
 end
 
-Then /^the "([^"]*)" checkbox(?: within "([^"]*)")? should not be checked$/ do |label, selector|
+Then /^the "([^"]*)" (?:checkbox|radio button)(?: within "([^"]*)")? should not be checked$/ do |label, selector|
   with_scope(selector) do
     field_checked = find_field(label)['checked']
     if field_checked.respond_to? :should

@@ -8,7 +8,7 @@ require 'rails/test_help'
 
 require 'mocha'
 require 'mocha/mini_test'
-
+require "minitest/spec"
 require "minitest/reporters"
 Minitest::Reporters.use! Minitest::Reporters::ProgressReporter.new, ENV, Minitest.backtrace_filter
 
@@ -19,6 +19,7 @@ require_relative 'support/controller_test_case'
 require_relative 'support/authenticated_test_helper'
 require_relative 'support/action_tracker_test_helper'
 require_relative 'support/noosfero_doc_test'
+require_relative 'support/performance_helper'
 require_relative 'support/noosfero_test_helper'
 
 FileUtils.rm_rf(Rails.root.join('index', 'test'))
@@ -51,16 +52,12 @@ class ActiveSupport::TestCase
   # then set this back to true.
   self.use_instantiated_fixtures  = false
 
-  # Add more helper methods to be used by all tests here...
-
-  # for fixture_file_upload
-  include ActionDispatch::TestProcess
-
-  include Noosfero::Factory
-
-  include AuthenticatedTestHelper
-
   extend Test::Should
+
+  include ActionDispatch::TestProcess
+  include Noosfero::Factory
+  include AuthenticatedTestHelper
+  include PerformanceHelper
 
   fixtures :environments, :roles
 
@@ -90,8 +87,8 @@ class ActiveSupport::TestCase
     norm1 = enum1.group_by{|e|e}.values
     norm2 = enum2.group_by{|e|e}.values
     assert_equal norm1.size, norm2.size, "Size mismatch: #{enum1.inspect} vs #{enum2.inspect}"
-    assert_equal [], norm1 - norm2
-    assert_equal [], norm2 - norm1
+    assert_equal [], norm1 - norm2, "Arrays #{norm1} and #{norm2} are not equivalents"
+    assert_equal [], norm2 - norm1, "Arrays #{norm1} and #{norm2} are not equivalents"
   end
 
   def assert_mandatory(object, attribute, test_value = 'some random string')
@@ -178,20 +175,20 @@ class ActiveSupport::TestCase
   end
 
   def process_delayed_job_queue
-    silence_stream(STDOUT) do
+    silence_stream STDOUT do
       Delayed::Worker.new.work_off
     end
   end
 
   def uses_postgresql(schema_name = 'test_schema')
-    adapter = ActiveRecord::Base.connection.class
+    adapter = ApplicationRecord.connection.class
     adapter.any_instance.stubs(:adapter_name).returns('PostgreSQL')
     adapter.any_instance.stubs(:schema_search_path).returns(schema_name)
     Noosfero::MultiTenancy.stubs(:on?).returns(true)
   end
 
   def uses_sqlite
-    adapter = ActiveRecord::Base.connection.class
+    adapter = ApplicationRecord.connection.class
     adapter.any_instance.stubs(:adapter_name).returns('SQLite')
     Noosfero::MultiTenancy.stubs(:on?).returns(false)
   end

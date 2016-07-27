@@ -1,7 +1,7 @@
 # A Environment is like a website to be hosted in the platform. It may
 # contain multiple Profile's and can be identified by several different
 # domains.
-class Environment < ActiveRecord::Base
+class Environment < ApplicationRecord
 
   attr_accessible :name, :is_default, :signup_welcome_text_subject,
                   :signup_welcome_text_body, :terms_of_use,
@@ -13,7 +13,9 @@ class Environment < ActiveRecord::Base
                   :reports_lower_bound, :noreply_email,
                   :signup_welcome_screen_body, :members_whitelist_enabled,
                   :members_whitelist, :highlighted_news_amount,
-                  :portal_news_amount, :date_format, :signup_intro
+                  :portal_news_amount, :date_format, :signup_intro,
+                  :enable_feed_proxy, :http_feed_proxy, :https_feed_proxy,
+                  :disable_feed_ssl
 
   has_many :users
 
@@ -56,11 +58,12 @@ class Environment < ActiveRecord::Base
     'manage_environment_trusted_sites' => N_('Manage environment trusted sites'),
     'edit_appearance'      => N_('Edit appearance'),
     'manage_email_templates' => N_('Manage Email Templates'),
+    'edit_raw_html_block'      => N_('Edit Raw HTML block'),
   }
 
   module Roles
     def self.admin(env_id)
-      Role.find_by_key_and_environment_id('environment_administrator', env_id)
+      Role.find_by(key: 'environment_administrator', environment_id: env_id)
     end
   end
 
@@ -125,7 +128,6 @@ class Environment < ActiveRecord::Base
       'disable_asset_enterprises' => _('Disable search for enterprises'),
       'disable_asset_people' => _('Disable search for people'),
       'disable_asset_communities' => _('Disable search for communities'),
-      'disable_asset_products' => _('Disable search for products'),
       'disable_asset_events' => _('Disable search for events'),
       'disable_categories' => _('Disable categories'),
       'disable_header_and_footer' => _('Disable header/footer editing by users'),
@@ -136,7 +138,6 @@ class Environment < ActiveRecord::Base
       'disable_contact_community' => _('Disable contact for groups/communities'),
       'forbid_destroy_profile' => _('Forbid users of removing profiles'),
 
-      'products_for_enterprises' => _('Enable products for enterprises'),
       'enterprise_registration' => _('Enterprise registration'),
       'enterprise_activation' => _('Enable activation of enterprises'),
       'enterprises_are_disabled_when_created' => _('Enterprises are disabled when created'),
@@ -199,6 +200,7 @@ class Environment < ActiveRecord::Base
   # Relationships and applied behaviour
   # #################################################
 
+  extend ActsAsHavingBoxes::ClassMethods
   acts_as_having_boxes
 
   after_create do |env|
@@ -223,7 +225,6 @@ class Environment < ActiveRecord::Base
 
   has_many :organizations
   has_many :enterprises
-  has_many :products, :through => :enterprises
   has_many :people
   has_many :communities
   has_many :licenses
@@ -233,22 +234,15 @@ class Environment < ActiveRecord::Base
     order('display_color').where('display_color is not null and parent_id is null')
   }, class_name: 'Category'
 
-  has_many :product_categories, -> { where type: 'ProductCategory'}
   has_many :regions
   has_many :states
   has_many :cities
 
   has_many :roles, :dependent => :destroy
 
-  has_many :qualifiers
-  has_many :certifiers
-
   has_many :mailings, :class_name => 'EnvironmentMailing', :foreign_key => :source_id, :as => 'source'
 
   acts_as_accessible
-
-  has_many :units, :order => 'position'
-  has_many :production_costs, :as => :owner
 
   def superior_intances
     [self, nil]
@@ -258,7 +252,8 @@ class Environment < ActiveRecord::Base
   # #################################################
 
   # store the Environment settings as YAML-serialized Hash.
-  acts_as_having_settings :field => :settings
+  extend ActsAsHavingSettings::ClassMethods
+  acts_as_having_settings field: :settings
 
   # introduce and explain to users something about the signup
   settings_items :signup_intro, :type => String
@@ -438,9 +433,7 @@ class Environment < ActiveRecord::Base
   end
 
   DEFAULT_FEATURES = %w(
-    disable_asset_products
     disable_gender_icon
-    products_for_enterprises
     disable_select_city_for_contact
     enterprise_registration
     media_panel
@@ -713,7 +706,7 @@ class Environment < ActiveRecord::Base
   def default_hostname(email_hostname = false)
     domain = 'localhost'
     unless self.domains(true).empty?
-      domain = (self.domains.find_by_is_default(true) || self.domains.find(:first, :order => 'id')).name
+      domain = (self.domains.find_by(is_default: true) || self.domains.order(:id).first).name
       domain = email_hostname ? domain : (force_www ? ('www.' + domain) : domain)
     end
     domain
@@ -728,7 +721,7 @@ class Environment < ActiveRecord::Base
     url << (Noosfero.url_options.key?(:host) ? Noosfero.url_options[:host] : default_hostname)
     url << ':' << Noosfero.url_options[:port].to_s if Noosfero.url_options.key?(:port)
     url << Noosfero.root('')
-    url
+    url.html_safe
   end
 
   def to_s
@@ -757,6 +750,10 @@ class Environment < ActiveRecord::Base
     else
       []
     end
+  end
+
+  def theme_ids
+    settings[:themes] || []
   end
 
   def themes=(values)
@@ -807,7 +804,7 @@ class Environment < ActiveRecord::Base
   end
 
   def community_default_template
-    template = Community.find_by_id settings[:community_template_id]
+    template = Community.find_by id: settings[:community_template_id]
     template if template && template.is_template?
   end
 
@@ -820,7 +817,7 @@ class Environment < ActiveRecord::Base
   end
 
   def person_default_template
-    template = Person.find_by_id settings[:person_template_id]
+    template = Person.find_by id: settings[:person_template_id]
     template if template && template.is_template?
   end
 
@@ -833,7 +830,7 @@ class Environment < ActiveRecord::Base
   end
 
   def enterprise_default_template
-    template = Enterprise.find_by_id settings[:enterprise_template_id]
+    template = Enterprise.find_by id: settings[:enterprise_template_id]
     template if template && template.is_template?
   end
 
@@ -842,7 +839,7 @@ class Environment < ActiveRecord::Base
   end
 
   def inactive_enterprise_template
-    template = Enterprise.find_by_id settings[:inactive_enterprise_template_id]
+    template = Enterprise.find_by id: settings[:inactive_enterprise_template_id]
     template if template && template.is_template
   end
 
@@ -963,10 +960,6 @@ class Environment < ActiveRecord::Base
       license.environment = self
       license.save!
     end
-  end
-
-  def highlighted_products_with_image(options = {})
-    self.products.where(highlighted: true).joins(:image).order('created_at ASC')
   end
 
   settings_items :home_cache_in_minutes, :type => :integer, :default => 5

@@ -206,4 +206,15 @@ jQuery(function($) {
     return false;
   });
 
+  //Hide / Show the text area
+  $("#article_published_false").click(show_hide_privacy_options);
+  $("#article_published_true").click(show_hide_privacy_options);
+  $(".custom_privacy_option").click(show_hide_token_input);
+
+  //Workaround to pointer-events:none CSS3  
+  $('a.disabled').click(function(e){
+    e.preventDefault();
+    return false;
+  });
+
 });

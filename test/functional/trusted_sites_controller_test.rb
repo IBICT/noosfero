@@ -6,9 +6,8 @@ class TrustedSitesControllerTest < ActionController::TestCase
 
   def setup
     @controller = TrustedSitesController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
-    @role = Role.find(:first)
+
+    @role = Role.first
     @environment = Environment.default
     @environment.trusted_sites_for_iframe = ['existing.site.com']
     @environment.save!

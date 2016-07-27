@@ -8,8 +8,6 @@ class OrganizationRatingsPluginProfileControllerTest < ActionController::TestCas
 
   def setup
     @controller = OrganizationRatingsPluginProfileController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
 
     @environment = Environment.default
     @environment.enabled_plugins = ['OrganizationRatingsPlugin']
@@ -46,7 +44,7 @@ class OrganizationRatingsPluginProfileControllerTest < ActionController::TestCas
   test "do not create community_rating without a rate value" do
     post :new_rating, profile: @community.identifier, :comments => {:body => ""}, :organization_rating_value => nil
 
-    assert_equal "Sorry, there were problems rating this profile.", session[:notice]
+    assert_tag :tag => 'div', :attributes => {:class => /errorExplanation/}, :content => /Value can't be blank/
   end
 
   test "do not create two ratings on Community when vote once config is true" do
@@ -148,6 +146,39 @@ class OrganizationRatingsPluginProfileControllerTest < ActionController::TestCas
 
     get :new_rating, profile: @community.identifier
     assert_tag :tag => 'p', :content => /Report waiting for approval/, :attributes => {:class =>/moderation-msg/}
+    assert_tag :tag => 'p', :attributes => {:class =>/comment-body/}
+  end
+
+  test "display rejected comment to env admin" do
+    post :new_rating, profile: @community.identifier, :comments => {:body => "rejected comment"}, :organization_rating_value => 3
+
+    @admin = create_admin_user(@environment)
+    login_as @admin
+    @controller.stubs(:current_user).returns(Profile[@admin].user)
+
+    CreateOrganizationRatingComment.last.cancel
+
+    get :new_rating, profile: @community.identifier
+    assert_tag :tag => 'p', :attributes => {:class =>/comment-body/}, :content => /rejected comment/
+  end
+
+  test "not display rejected comment to regular user" do
+    p1 = create_user('regularUser').person
+    @community.add_member p1
+    login_as(p1.identifier)
+    @controller.stubs(:logged_in?).returns(true)
+    @controller.stubs(:current_user).returns(p1.user)
+
+    post :new_rating, profile: @community.identifier, :comments => {:body => "rejected comment"}, :organization_rating_value => 3
+    CreateOrganizationRatingComment.last.cancel
+    get :new_rating, profile: @community.identifier
+    assert_no_tag :tag => 'p', :attributes => {:class =>/comment-body/}
+  end
+
+  test "not display rejected comment to community admin" do
+    post :new_rating, profile: @community.identifier, :comments => {:body => "rejected comment"}, :organization_rating_value => 3
+    CreateOrganizationRatingComment.last.cancel
+    get :new_rating, profile: @community.identifier
     assert_no_tag :tag => 'p', :attributes => {:class =>/comment-body/}
   end
 
@@ -187,5 +218,25 @@ class OrganizationRatingsPluginProfileControllerTest < ActionController::TestCas
     get :new_rating, profile: @community.identifier
     assert_no_tag :tag => 'p', :content => /Report waiting for approva/, :attributes => {:class =>/comment-rejected-msg/}
     assert_tag :tag => 'p', :content => /comment accepted/, :attributes => {:class =>/comment-body/}
+  end
+
+  test "should display ratings count in average block" do
+    average_block = AverageRatingBlock.new
+    average_block.box = @community.boxes.find_by_position(1)
+    average_block.save!
+
+    OrganizationRating.stubs(:statistics_for_profile).returns({:average => 5, :total => 42})
+    get :new_rating, profile: @community.identifier
+    assert_tag :tag => 'a', :content => /\(42\)/
+  end
+
+  test "should display maximum ratings count in average block" do
+    average_block = AverageRatingBlock.new
+    average_block.box = @community.boxes.find_by_position(1)
+    average_block.save!
+
+    OrganizationRating.stubs(:statistics_for_profile).returns({:average => 5, :total => 999000})
+    get :new_rating, profile: @community.identifier
+    assert_tag :tag => 'a', :content => /\(10000\+\)/
   end
 end

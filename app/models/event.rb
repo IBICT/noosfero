@@ -1,4 +1,3 @@
-require 'noosfero/translatable_content'
 require 'builder'
 
 class Event < Article
@@ -135,7 +134,11 @@ class Event < Article
     true
   end
 
-  include Noosfero::TranslatableContent
+  def self.can_display_blocks?
+    false
+  end
+
+  include TranslatableContent
   include MaybeAddHttp
 
 end

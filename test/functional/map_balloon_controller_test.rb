@@ -5,18 +5,9 @@ class MapBalloonControllerTest < ActionController::TestCase
 
   def setup
     @controller = MapBalloonController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
 
     @profile = create_user('test_profile').person
     login_as(@profile.identifier)
-  end
-
-  should 'find product to show' do
-    prod = create(Product, :name => 'Product1', :product_category_id => fast_create(ProductCategory).id,
-      :profile_id => fast_create(Enterprise).id)
-    get :product, :id => prod.id
-    assert_equal prod, assigns(:product)
   end
 
   should 'find person to show' do
