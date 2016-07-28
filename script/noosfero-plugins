@@ -87,7 +87,7 @@ _enable(){
   plugin="$1"
 
   if [ -d "$available_plugins_dir/$plugin" ]; then
-    source="$available_plugins_dir/$plugin"
+    source="../../plugins/$plugin"
   else
     if [ ! -d "$plugin" ]; then
       echo "E: $plugin not found (needs to be an existing directory)"
@@ -101,6 +101,9 @@ _enable(){
 
   target="$enabled_plugins_dir/$plugin"
   base="$base_plugins_dir/$plugin"
+
+  cd "$NOOSFERO_DIR/plugins/$plugin"
+
   run "$source/before_enable.rb"
   if [ -h "$target" -o -h "$base" ]; then
     _say "$plugin already enabled"
@@ -111,32 +114,33 @@ _enable(){
     fi
     installation_ok=true
     installation_file="$source/install.rb"
+    dependencies_ok=true
     if ! run $installation_file; then
       installation_ok=false
-    else
-      dependencies_ok=true
-      dependencies_file="$source/dependencies.rb"
-      if [ -e $source/Gemfile ]; then
-        gemfile=$(mktemp --tmpdir=.)
-        cat $NOOSFERO_DIR/Gemfile $source/Gemfile > $gemfile
-        if [ -z "$NOOSFERO_BUNDLE_OPTS" ]; then NOOSFERO_BUNDLE_OPTS="--local"; fi
-        if ! RUBYOPT='' BUNDLE_GEMFILE="$gemfile" bundle $NOOSFERO_BUNDLE_OPTS --quiet; then
-          dependencies_ok=false
-        else
-          mv "$gemfile".lock Gemfile.lock
-        fi
-        rm -f $gemfile
-      fi
-      if ! run $dependencies_file; then
-        dependencies_ok=false
-      fi
+    #else
+    #  dependencies_ok=true
+    #  dependencies_file="$source/dependencies.rb"
+    #  if [ -e $source/Gemfile ]; then
+    #    gemfile=$(mktemp --tmpdir=.)
+    #    cat $NOOSFERO_DIR/Gemfile $source/Gemfile > $gemfile
+    #    if [ -z "$BUNDLE_OPTS" ]; then BUNDLE_OPTS="--local"; fi
+    #    if ! RUBYOPT='' BUNDLE_GEMFILE="$gemfile" bundle $BUNDLE_OPTS --quiet; then
+    #      dependencies_ok=false
+    #    else
+    #      mv "$gemfile".lock Gemfile.lock
+    #    fi
+    #    rm -f $gemfile
+    #  fi
+    #  if ! run $dependencies_file; then
+    #    dependencies_ok=false
+    #  fi
     fi
     if [ "$installation_ok" = true ] && [ "$dependencies_ok" = true ]; then
       ln -s "$source" "$target"
       plugins_public_dir="$NOOSFERO_DIR/public/plugins"
       plugins_features_dir="$NOOSFERO_DIR/features/plugins"
-      test -d "$target/public" && ln -s "$target/public" "$plugins_public_dir/$plugin"
-      test -d "$NOOSFERO_DIR/features" && test -d "$target/features" && ln -s "$target/features" "$plugins_features_dir/$plugin"
+      test -d "$source/public" && ln -s "$source/public" "$plugins_public_dir/$plugin"
+      test -d "$NOOSFERO_DIR/features" && test -d "$source/features" && ln -s "$source/features" "$plugins_features_dir/$plugin"
       _say "$plugin enabled"
       run "$source/after_enable.rb"
       needs_migrate=true
