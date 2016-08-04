@@ -15,7 +15,7 @@ class Environment < ApplicationRecord
                   :members_whitelist, :highlighted_news_amount,
                   :portal_news_amount, :date_format, :signup_intro,
                   :enable_feed_proxy, :http_feed_proxy, :https_feed_proxy,
-                  :disable_feed_ssl
+                  :disable_feed_ssl, :disabled_blocks
 
   has_many :users
 
@@ -338,6 +338,8 @@ class Environment < ApplicationRecord
 
   settings_items :enabled_plugins, :type => Array, :default => Noosfero::Plugin.available_plugin_names
 
+  settings_items :disabled_blocks, :type => Array, :default => []
+
   settings_items :search_hints, :type => Hash, :default => {}
 
   # Set to return http forbidden to host not on the allow origin list bellow
@@ -411,6 +413,10 @@ class Environment < ApplicationRecord
 
   def plugin_enabled?(plugin)
     enabled_plugins.include?(plugin.to_s)
+  end
+
+  def block_disabled?(block)
+    disabled_blocks.include?(block.to_s)
   end
 
   # enables the features identified by <tt>features</tt>, which is expected to

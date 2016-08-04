@@ -20,16 +20,11 @@ class FeaturesController < AdminController
                 SlideshowBlock,
                 ProfileSearchBlock,
                 HighlightsBlock,
-                FriendsBlock,
                 FavoriteEnterprisesBlock,
                 CommunitiesBlock,
                 EnterprisesBlock,
-                MembersBlock,
                 DisabledEnterpriseMessageBlock,
-                ProductCategoriesBlock,
-                FeaturedProductsBlock,
-                FansBlock,
-                ProductsBlock ]
+                FansBlock ]
 
     @blocks += plugins.dispatch(:extra_blocks)
     @blocks.sort_by! { |block| block.name }
