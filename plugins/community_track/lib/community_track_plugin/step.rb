@@ -61,7 +61,7 @@ class CommunityTrackPlugin::Step < Folder
   end
 
   def enabled_tools
-    tools = [TinyMceArticle, Forum]
+    tools = [TextArticle, Forum]
     tools << CommunityHubPlugin::Hub if environment.plugin_enabled?('CommunityHubPlugin')
     tools << ProposalsDiscussionPlugin::Discussion if environment.plugin_enabled?('ProposalsDiscussionPlugin')
     tools << PairwisePlugin::PairwiseContent if environment.plugin_enabled?('PairwisePlugin')
