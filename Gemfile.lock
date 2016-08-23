@@ -479,7 +479,7 @@ DEPENDENCIES
   ruby-feedparser (~> 0.7)
   ruby_bosh (> 0.0.0)!
   sass-rails
-  selenium-webdriver (>= 2.50)
+  selenium-webdriver (>= 2.53)
   slim
   spring
   sprockets-rails (~> 2.1)
