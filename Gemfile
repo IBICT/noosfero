@@ -35,7 +35,7 @@ gem 'activerecord-session_store', ('1.0.0.pre' if RUBY_VERSION >= '2.3.0')
 
 # API dependencies
 gem 'grape',                    '~> 0.12'
-gem 'grape-entity',             '0.4.8'
+gem 'grape-entity',             '~>0.4.8'
 gem 'grape_logging'
 gem 'grape-swagger'
 gem 'swagger-ui_rails'
@@ -45,7 +45,7 @@ gem 'rack-contrib'
 gem 'liquid',                    '~> 3.0.3'
 
 gem 'api-pagination',           '>= 4.1.1'
-gem 'liquid',                    '~> 3.0.3'
+gem 'liquid',                    '>= 3.0.3'
 
 # asset pipeline
 gem 'uglifier', '>= 1.0.3'
