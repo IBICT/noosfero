@@ -42,7 +42,6 @@ gem 'swagger-ui_rails'
 gem 'kramdown'
 gem 'rack-cors'
 gem 'rack-contrib'
-gem 'liquid',                    '~> 3.0.3'
 
 gem 'api-pagination',           '>= 4.1.1'
 gem 'liquid',                    '>= 3.0.3'

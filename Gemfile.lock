@@ -444,7 +444,7 @@ DEPENDENCIES
   gdata (> 0.0.0)!
   gettext (~> 3.1)
   grape (~> 0.12)
-  grape-entity (= 0.4.8)
+  grape-entity (~> 0.4.8)
   grape-swagger
   grape_logging
   honeypot (= 0.0.0)!
@@ -452,7 +452,7 @@ DEPENDENCIES
   kandadaboggu-vote_fu (> 0.0.0)!
   kramdown
   launchy
-  liquid (~> 3.0.3)
+  liquid (>= 3.0.3)
   locale (~> 2.1)
   minitest
   minitest-reporters
