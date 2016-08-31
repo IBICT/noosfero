@@ -111,10 +111,6 @@ module ApplicationHelper
       content = capture(&block)
     end
 
-    if options[:type] == :textile
-      content = RedCloth.new(content).to_html
-    end
-
     options[:class] = '' if ! options[:class]
     options[:class] += ' button icon-help' # with-text
 
@@ -130,13 +126,6 @@ module ApplicationHelper
     end
 
     text
-  end
-
-  # alias for <tt>help(content, :textile)</tt>. You can pass a block in the
-  # same way you would do if you called <tt>help</tt> directly.
-  def help_textile(content = nil, link_name = nil, options = {}, &block)
-    options[:type] = :textile
-    help(content, link_name, options, &block)
   end
 
   # TODO: do something more useful here
@@ -552,7 +541,7 @@ module ApplicationHelper
         )
       label_html = self.class.content_tag 'label', text,
                                         :class => 'formlabel'
-      control_html = self.class.content_tag 'div', html,
+      control_html = self.class.content_tag 'div', html.html_safe,
                                         :class => 'formfield type-radio '+
                                         'fieldgroup linesize'+line_size.to_s()
 
@@ -977,11 +966,16 @@ module ApplicationHelper
     content_tag(:div, _('Source: %s') % source_url, :id => 'article-source') unless source_url.nil?
   end
 
-  def task_information(task)
+  def task_information(task, params = {})
     values = {}
     values.merge!(task.information[:variables]) if task.information[:variables]
     values.merge!({:requestor => link_to(task.requestor.name, task.requestor.url)}) if task.requestor
-    values.merge!({:target => link_to(task.target.name, task.target.url)}) if (task.target && task.target.respond_to?(:url))
+    if (task.target && task.target.respond_to?(:url))
+      values.merge!({:target => link_to(task.target.name, task.target.url)})
+      target_detail = _("in %s").html_safe % values[:target]
+      target_detail = '' if task.target.identifier == params[:profile]
+      values.merge!({:target_detail => target_detail}) 
+    end
     values.merge!({:subject => content_tag('span', task.subject, :class=>'task_target')}) if task.subject
     values.merge!({:linked_subject => link_to(content_tag('span', task.linked_subject[:text], :class => 'task_target'), task.linked_subject[:url])}) if task.linked_subject
     (task.information[:message] % values).html_safe
@@ -1243,6 +1237,17 @@ module ApplicationHelper
       :title=>_("Exit full screen mode")
     })
     content.html_safe
+  end
+
+  def current_editor_is?(editor)
+    editor.blank? ? false : current_editor == editor
+  end
+
+  def current_editor(mode = '')
+    editor = @article.editor || Article::Editor::TINY_MCE unless @article.nil?
+    editor ||= (current_person.nil? || current_person.editor.nil?) ? Article::Editor::TINY_MCE : current_person.editor
+    editor += '_' + mode unless mode.blank?
+    editor
   end
 
 end

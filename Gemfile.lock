@@ -444,7 +444,7 @@ DEPENDENCIES
   gdata (> 0.0.0)!
   gettext (~> 3.1)
   grape (~> 0.12)
-  grape-entity (= 0.4.8)
+  grape-entity (~> 0.4.8)
   grape-swagger
   grape_logging
   honeypot (= 0.0.0)!
@@ -452,7 +452,7 @@ DEPENDENCIES
   kandadaboggu-vote_fu (> 0.0.0)!
   kramdown
   launchy
-  liquid (~> 3.0.3)
+  liquid (>= 3.0.3)
   locale (~> 2.1)
   minitest
   minitest-reporters
@@ -479,7 +479,7 @@ DEPENDENCIES
   ruby-feedparser (~> 0.7)
   ruby_bosh (> 0.0.0)!
   sass-rails
-  selenium-webdriver (>= 2.50)
+  selenium-webdriver (>= 2.53)
   slim
   spring
   sprockets-rails (~> 2.1)
@@ -489,7 +489,7 @@ DEPENDENCIES
   unicorn (~> 4.8)
   validates_as_cnpj (= 0.0.0)!
   validates_multiparameter_assignments (= 0.0.0)!
-  whenever (~> 0.9.4)
+  whenever (= 0.9.4)
   will_paginate (~> 3.0.7)
   xss_terminate (= 0.0.0)!
 

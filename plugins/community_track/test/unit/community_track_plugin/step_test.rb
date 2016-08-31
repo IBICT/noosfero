@@ -237,7 +237,7 @@ class StepTest < ActiveSupport::TestCase
   end
 
   should 'return enabled tools for a step' do
-    assert_includes @step.enabled_tools, TinyMceArticle
+    assert_includes @step.enabled_tools, TextArticle
     assert_includes @step.enabled_tools, Forum
   end
 
