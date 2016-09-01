@@ -1,51 +1,42 @@
 [submodule "plugins/pairwise"]
 	path = plugins/pairwise
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/pairwise.git
+	url = https://gitlab.com/noosfero-plugins/pairwise.git
 [submodule "plugins/proposals_discussion"]
 	path = plugins/proposals_discussion
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/proposals_discussion.git
-[submodule "plugins/gamification"]
-	path = plugins/gamification
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/gamification.git
+	url = https://gitlab.com/noosfero-plugins/proposals_discussion.git
 [submodule "plugins/notification"]
 	path = plugins/notification
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/notification.git
+	url = https://gitlab.com/noosfero-plugins/notification.git
+[submodule "plugins/gamification"]
+	path = plugins/gamification
+	url = https://gitlab.com/noosfero-plugins/gamification.git
 [submodule "plugins/email_article"]
 	path = plugins/email_article
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/email_article.git
+	url = https://gitlab.com/noosfero-plugins/email_article.git
 [submodule "plugins/gravatar_provider"]
 	path = plugins/gravatar_provider
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/gravatar-provider.git
+	url = https://gitlab.com/noosfero-plugins/gravatar-provider.git
 [submodule "plugins/juventude"]
 	path = plugins/juventude
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/juventude.git
+	url = https://gitlab.com/noosfero-plugins/juventude.git
 [submodule "plugins/dialoga"]
 	path = plugins/dialoga
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/dialoga-plugin.git
-[submodule "rest-clients/confjuvapp"]
-	path = rest-clients/confjuvapp
-	url = https://softwarepublico.gov.br/gitlab/noosfero-apps/confjuvapp.git
-[submodule "rest-clients/proposal-app"]
-	path = rest-clients/proposal-app
-	url = https://softwarepublico.gov.br/gitlab/noosfero-apps/proposal-app.git
+	url = https://gitlab.com/noosfero-plugins/dialoga-plugin.git
 [submodule "plugins/serpro_captcha"]
 	path = plugins/serpro_captcha
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/serpro_captcha.git
+	url = https://gitlab.com/noosfero-plugins/serpro_captcha.git
 [submodule "plugins/recaptcha"]
 	path = plugins/recaptcha
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/recaptcha.git
+	url = https://gitlab.com/noosfero-plugins/recaptcha.git
 [submodule "plugins/insight"]
 	path = plugins/insight
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/insight.git
+	url = https://gitlab.com/noosfero-plugins/insight.git
 [submodule "plugins/community_hub"]
 	path = plugins/community_hub
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/community_hub.git
-[submodule "plugins/inclusao_digital"]
-	path = plugins/inclusao_digital
-	url = http://softwarepublico.gov.br/gitlab/noosfero-plugins/inclusao_digital.git
+	url = https://gitlab.com/noosfero-plugins/community_hub.git
 [submodule "plugins/serpro_integration"]
 	path = plugins/serpro_integration
-	url = https://softwarepublico.gov.br/gitlab/noosfero-plugins/serpro_integration.git
+	url = https://gitlab.com/noosfero-plugins/serpro_integration.git
 [submodule "public/designs/themes/conference"]
 	path = public/designs/themes/conference
 	url = https://gitlab.com/noosfero-themes/conference.git
@@ -106,3 +97,9 @@
 [submodule "public/designs/themes/minjustica"]
 	path = public/designs/themes/minjustica
 	url = https://gitlab.com/noosfero-themes/minjustica.git
+[submodule "rest-clients/confjuvapp"]
+	path = rest-clients/confjuvapp
+	url = https://gitlab.com/noosfero-apps/confjuvapp.git
+[submodule "rest-clients/proposal-app"]
+	path = rest-clients/proposal-app
+	url = https://gitlab.com/noosfero-apps/proposal-app.git
