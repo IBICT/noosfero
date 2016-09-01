@@ -55,11 +55,11 @@ class TasksController < MyProfileController
 
   def close
     failed = {}
-    save = false
 
     if params[:tasks]
       params[:tasks].each do |id, value|
         decision = value[:decision]
+        save = false
 
         if value[:task].is_a?(Hash) && value[:task][:tag_list]
 
