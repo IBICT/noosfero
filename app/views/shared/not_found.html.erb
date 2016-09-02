@@ -1,5 +1,5 @@
 <div id='not-found'>
-    <h1><%= _('There is no such page: %s') % (content_tag('tt', @path)) %></h1>
+    <h1><%= _('There is no such page: %s').html_safe % (content_tag('tt', @path)) %></h1>
     <p>
     <%= _('.You may have clicked an expired link or mistyped the address.') %>
     <%= _('.This page does not exist. Would you like to: Create a new content or locate existing content.') %>
