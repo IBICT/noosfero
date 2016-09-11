@@ -33,13 +33,6 @@
 *= require followers.js
 *= require manage-followers.js
 *= require report-abuse.js
-*= require autogrow.js
-*= require slick.js
-*= require block-store.js
-*= require jquery.typewatch.js
-*= require require_login.js
-*= require email_templates.js
-*= require slick.js
 *= require require_login.js
 *= require block-store.js
 *= require email_templates.js
