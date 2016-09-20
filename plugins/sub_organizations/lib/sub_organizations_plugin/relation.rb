@@ -26,12 +26,14 @@ class SubOrganizationsPlugin::Relation < ApplicationRecord
     end
   end
 
-  def self.add_children(parent, *children)
-    children.each {|child| SubOrganizationsPlugin::Relation.create!(:parent => parent, :child => child)}
-  end
+  class << self
+    def add_children(parent, *children)
+      children.each {|child| create!(:parent => parent, :child => child)}
+    end
 
-  def self.remove_children(parent, *children)
-    children.flatten.each {|child| find_by_parent_id_and_child_id(parent.id, child.id).destroy}
+    def remove_children(parent, *children)
+      children.flatten.each {|child| find_by_parent_id_and_child_id(parent.id, child.id).destroy}
+    end
   end
 
 end

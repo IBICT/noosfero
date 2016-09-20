@@ -28,6 +28,10 @@ class SubOrganizationsPlugin::ApprovePaternity < Task
     {:message => _('%{requestor} wants to add this organization as a sub-organization of %{linked_subject}.')}
   end
 
+  def reject_details
+    true
+  end
+
   def icon
     {:type => :profile_image, :profile => parent, :url => parent.url}
   end
