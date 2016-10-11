@@ -103,3 +103,6 @@
 [submodule "rest-clients/proposal-app"]
 	path = rest-clients/proposal-app
 	url = https://gitlab.com/noosfero-apps/proposal-app.git
+[submodule "public/designs/themes/dialoga"]
+	path = public/designs/themes/dialoga
+	url = https://gitlab.com/noosfero-themes/dialoga.git
