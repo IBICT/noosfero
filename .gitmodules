@@ -106,3 +106,6 @@
 [submodule "public/designs/themes/dialoga"]
 	path = public/designs/themes/dialoga
 	url = https://gitlab.com/noosfero-themes/dialoga.git
+[submodule "public/designs/themes/consulta"]
+	path = public/designs/themes/consulta
+	url = https://gitlab.com/noosfero-themes/consulta.git
