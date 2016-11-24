@@ -1140,12 +1140,10 @@ function apply_zoom_to_images(zoom_text) {
 }
 
 function notifyMe(title, options) {
-  // This might be useful in the future
-  //
   // Let's check if the browser supports notifications
-  // if (!("Notification" in window)) {
-  //   alert("This browser does not support desktop notification");
-  // }
+   if (!("Notification" in window)) {
+     return null;
+   }
 
   // Let's check if the user is okay to get some notification
   var notification = null;
@@ -1171,7 +1169,9 @@ function notifyMe(title, options) {
     });
   }
 
-  setTimeout(function() {notification.close()}, 5000);
+  if(!PERMANENT_NOTIFICATIONS)
+    setTimeout(function() {notification.close()}, 5000);
+
   notification.onclick = function(){
     notification.close();
     // Chromium tweak
