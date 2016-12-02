@@ -15,7 +15,7 @@ class Environment < ApplicationRecord
                   :members_whitelist, :highlighted_news_amount,
                   :portal_news_amount, :date_format, :signup_intro,
                   :enable_feed_proxy, :http_feed_proxy, :https_feed_proxy,
-                  :disable_feed_ssl, :disabled_blocks
+                  :disable_feed_ssl, :disabled_blocks, :layout_template
 
   has_many :users
 
@@ -57,8 +57,8 @@ class Environment < ApplicationRecord
     'manage_environment_licenses' => N_('Manage environment licenses'),
     'manage_environment_trusted_sites' => N_('Manage environment trusted sites'),
     'edit_appearance'      => N_('Edit appearance'),
-    'manage_email_templates' => N_('Manage Email Templates'),
     'edit_raw_html_block'      => N_('Edit Raw HTML block'),
+    'manage_email_templates' => N_('Manage Email Templates'),
   }
 
   module Roles
