@@ -14,6 +14,7 @@ development:
   api_recaptcha_site_key:      '6LdsWAcTAAAAAChTUUD6yu9fCDhdIZzNd7F53zf-'
   api_recaptcha_private_key:   '6LdsWAcTAAAAAB6maB_HalVyCc4asDAxPxloIMvY'
   api_recaptcha_verify_uri:    'https://www.google.com/recaptcha/api/siteverify'
+  delayed_attachment_fallback_original_image: false
 
 #Google Recaptcha setup
   api_captcha_enabled: true
@@ -49,3 +50,4 @@ production:
   api_recaptcha_v2_verify_uri:  'https://www.google.com/recaptcha/api/siteverify'
   # version 1 or 2
   api_captcha_version: 1
+  delayed_attachment_fallback_original_image: false
