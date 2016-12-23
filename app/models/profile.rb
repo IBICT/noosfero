@@ -8,7 +8,7 @@ class Profile < ApplicationRecord
       :fields_privacy, :preferred_domain_id, :category_ids, :country, :city, :state, :national_region_code, :email, 
       :contact_email, :redirect_l10n, :notification_time, :redirection_after_login, :custom_url_redirection, 
       :email_suggestions, :allow_members_to_invite, :invite_friends_only, :secret, :profile_admin_mail_notification,
-      :custom_fields, :region, :region_id, :allow_followers, :layout_template
+      :custom_fields, :region, :region_id, :allow_followers, :layout_template, :wall_access
 
   extend ActsAsHavingSettings::ClassMethods
   acts_as_having_settings field: :data
