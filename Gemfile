@@ -37,7 +37,7 @@ gem 'activerecord-session_store', ('1.0.0.pre' if RUBY_VERSION >= '2.3.0')
 gem 'grape',                    '~> 0.12'
 gem 'grape-entity',             '~>0.4.8'
 gem 'grape_logging'
-gem 'grape-swagger'
+gem 'grape-swagger',            '~>0.10.2'
 gem 'swagger-ui_rails'
 gem 'kramdown'
 gem 'rack-cors'
