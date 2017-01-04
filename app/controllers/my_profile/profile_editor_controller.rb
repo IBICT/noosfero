@@ -23,6 +23,7 @@ class ProfileEditorController < MyProfileController
   def edit
     @profile_data = profile
     @possible_domains = profile.possible_domains
+    @kinds = environment.kinds.where(:type => profile.type)
     if request.post?
       if profile.person? && params[:profile_data].is_a?(Hash)
         params[:profile_data][:fields_privacy] ||= {}

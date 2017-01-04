@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20161207214218) do
+ActiveRecord::Schema.define(version: 20161213193521) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -276,9 +276,11 @@ ActiveRecord::Schema.define(version: 20161207214218) do
   add_index "chat_messages", ["to_id"], name: "index_chat_messages_on_to_id", using: :btree
 
   create_table "circles", force: :cascade do |t|
-    t.string  "name"
-    t.integer "person_id"
-    t.string  "profile_type", null: false
+    t.string   "name"
+    t.integer  "person_id"
+    t.string   "profile_type", null: false
+    t.datetime "created_at"
+    t.datetime "updated_at"
   end
 
   add_index "circles", ["person_id", "name"], name: "circles_composite_key_index", unique: true, using: :btree
@@ -480,6 +482,18 @@ ActiveRecord::Schema.define(version: 20161207214218) do
 
   add_index "inputs", ["product_category_id"], name: "index_inputs_on_product_category_id", using: :btree
   add_index "inputs", ["product_id"], name: "index_inputs_on_product_id", using: :btree
+
+  create_table "kinds", force: :cascade do |t|
+    t.string  "name"
+    t.string  "type"
+    t.boolean "moderated",      default: false
+    t.integer "environment_id"
+  end
+
+  create_table "kinds_profiles", force: :cascade do |t|
+    t.integer "kind_id"
+    t.integer "profile_id"
+  end
 
   create_table "licenses", force: :cascade do |t|
     t.string  "name",           null: false

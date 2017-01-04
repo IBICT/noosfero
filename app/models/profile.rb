@@ -8,7 +8,8 @@ class Profile < ApplicationRecord
       :fields_privacy, :preferred_domain_id, :category_ids, :country, :city, :state, :national_region_code, :email, 
       :contact_email, :redirect_l10n, :notification_time, :redirection_after_login, :custom_url_redirection, 
       :email_suggestions, :allow_members_to_invite, :invite_friends_only, :secret, :profile_admin_mail_notification,
-      :custom_fields, :region, :region_id, :allow_followers, :layout_template, :wall_access
+      :custom_fields, :region, :region_id, :allow_followers, :layout_template, :wall_access,
+      :profile_kinds
 
   extend ActsAsHavingSettings::ClassMethods
   acts_as_having_settings field: :data
@@ -275,6 +276,7 @@ class Profile < ApplicationRecord
     where('circles.id = ?', circle.id)
   }
 
+  settings_items :wall_access, :type => :string, :default => 'users'
   settings_items :allow_followers, :type => :boolean, :default => true
   alias_method :allow_followers?, :allow_followers
 
@@ -382,6 +384,10 @@ class Profile < ApplicationRecord
       ret[p] = (ret[p] || []) + [c.category]
     end
     ret
+  end
+
+  def wall_access_levels
+    AccessLevels.options(1)
   end
 
   def interests
@@ -1198,7 +1204,7 @@ private :generate_url, :url_options
   end
 
   def followed_by?(person)
-    (person == self) || (person.in? self.followers)
+    (person == self) || (person.is_member_of?(self)) || (person.in? self.followers)
   end
 
   def in_social_circle?(person)
