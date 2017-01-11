@@ -375,6 +375,7 @@ class Profile < ApplicationRecord
 
   extend ActsAsHavingImage::ClassMethods
   acts_as_having_image
+  acts_as_having_image field: :top_image
 
   has_many :tasks, :dependent => :destroy, :as => 'target'
 
