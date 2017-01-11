@@ -4,12 +4,12 @@
 class Profile < ApplicationRecord
 
   attr_accessible :name, :identifier, :public_profile, :nickname, :custom_footer, :custom_header, :address, :zip_code, 
-      :contact_phone, :image_builder, :description, :closed, :template_id, :environment, :lat, :lng, :is_template, 
+      :contact_phone, :image_builder, :top_image_builder, :description, :closed, :template_id, :environment, :lat, :lng, :is_template, 
       :fields_privacy, :preferred_domain_id, :category_ids, :country, :city, :state, :national_region_code, :email, 
       :contact_email, :redirect_l10n, :notification_time, :redirection_after_login, :custom_url_redirection, 
       :email_suggestions, :allow_members_to_invite, :invite_friends_only, :secret, :profile_admin_mail_notification,
       :custom_fields, :region, :region_id, :allow_followers, :layout_template, :wall_access,
-      :profile_kinds
+      :profile_kinds, :layout_template
 
   extend ActsAsHavingSettings::ClassMethods
   acts_as_having_settings field: :data
@@ -243,6 +243,27 @@ class Profile < ApplicationRecord
   settings_items :email_suggestions, :type => :boolean, :default => false
   settings_items :profile_admin_mail_notification, :type => :boolean, :default => true
 
+  settings_items :profile_kinds, :type => :hash, :default => {}
+  after_save do |profile|
+    profile.profile_kinds.each do |key, value|
+      environment = profile.environment
+      kind = environment.kinds.where(:id => key.to_s).first
+      next unless kind.present?
+
+      value == '1' ? kind.add_profile(profile) : kind.remove_profile(profile)
+    end
+  end
+  before_save do |profile|
+    unless profile.setting_changed?(:profile_kinds)
+      profile.profile_kinds = {}
+    end
+  end
+
+  def kinds_style_classes
+    return nil if kinds.blank?
+    kinds.map(&:style_class).join(' ')
+  end
+
   extend ActsAsHavingBoxes::ClassMethods
   acts_as_having_boxes
 
@@ -376,6 +397,8 @@ class Profile < ApplicationRecord
   has_many :abuse_complaints, :foreign_key => 'requestor_id', :dependent => :destroy
 
   has_many :profile_suggestions, :foreign_key => :suggestion_id, :dependent => :destroy
+
+  has_and_belongs_to_many :kinds
 
   def top_level_categorization
     ret = {}
@@ -842,29 +865,6 @@ private :generate_url, :url_options
       remove_from_suggestion_list person
     else
       raise _("%s can't have members") % self.class.name
-    end
-  end
-
-  # Adds many people to profile by id's
-  def add_members_by_id(people_ids)
-
-    unless people_ids.nil? && people_ids.empty?
-
-      people = Person.where(id: people_ids)
-      people.each do |person|
-
-        add_member(person) unless person.is_member_of?(self)
-      end
-    end
-  end
-
-  # Adds many people to profile by email's
-  def add_members_by_email(people_emails)
-
-    people = User.where(email: people_emails)
-    people.each do |user|
-
-      add_member(user.person) unless user.person.is_member_of?(self)
     end
   end
 

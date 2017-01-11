@@ -134,6 +134,7 @@ module Api
         hash
       end
       expose :image, :using => Image
+      expose :top_image, :using => Image
       expose :region, :using => Region
       expose :type
       expose :custom_header
@@ -303,6 +304,9 @@ module Api
       expose :signup_intro
       expose :terms_of_use
       expose :top_url, as: :host
+      expose :type do |environment, options|
+        "Environment"
+      end
       expose :settings, if: lambda { |instance, options| options[:is_admin] }
       expose :permissions, if: lambda { |environment, options| options[:current_person].present? } do |environment, options|
         environment.permissions_for(options[:current_person])
@@ -347,6 +351,16 @@ module Api
 
     class AbuseComplaint < Task
       expose :abuse_reports, using: AbuseReport
+    end
+
+    class Domain < Entity
+      expose :id
+      expose :name
+      expose :is_default
+      expose :owner do |domain, options|
+        type_map = {Profile => ::Profile, Environment => ::Environment}.find {|k,v| domain.owner.kind_of?(v)}
+        type_map.first.represent(domain.owner, options) unless type_map.nil?
+      end
     end
   end
 end
