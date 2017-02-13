@@ -12,12 +12,15 @@ class ProfileControllerTest < ActionController::TestCase
   end
   attr_reader :profile
 
-  should 'list friends' do
-    get :friends
+  should 'list friends in alphabetical order' do
+    profile.add_friend(create_user('angela').person)
+    profile.add_friend(create_user('paula').person)
+    profile.add_friend(create_user('jose').person)
 
+    get :friends
     assert_response :success
     assert_template 'friends'
-    assert assigns(:friends)
+    assert_equal assigns(:friends).map(&:name), ['angela', 'jose', 'paula']
   end
 
   should 'remove person from article followers when unfollow' do
@@ -1881,6 +1884,15 @@ class ProfileControllerTest < ActionController::TestCase
     end
   end
 
+  should 'not display the unfollow button if the person is in the social circle' do
+    login_as(@profile.identifier)
+    community = fast_create(Community)
+    community.add_member(@profile)
+
+    get :index, :profile => community.identifier
+    assert_no_tag :tag => 'a', :attributes => {:id => 'action-unfollow'}
+  end
+
   should "redirect to page after unfollow" do
     login_as(@profile.identifier)
     person = fast_create(Person)
@@ -2127,6 +2139,37 @@ class ProfileControllerTest < ActionController::TestCase
     @controller.stubs(:environment).returns(env)
     result = @controller.send(:filter_activities, activities, :wall)
     assert_equivalent [a1,a3], result
+  end
+
+  should 'display about' do
+    get :about
+
+    assert_response :success
+    assert_template 'about'
+  end
+
+  should 'display profile tags in about' do
+    Person.any_instance.stubs(:article_tags).returns({ 'first profile tag' => 1, 'second profile tag' => 2})
+    get :about
+    assert_response :success
+    assert_template 'about'
+    assert_match /first profile tag/, @response.body
+    assert_match /second profile tag/, @response.body
+  end
+
+  should 'display activities' do
+    p1= fast_create(Person)
+    40.times{create(Scrap, sender: p1, receiver: p1, created_at: Time.now)}
+
+    @controller.stubs(:logged_in?).returns(true)
+    user = mock()
+    user.stubs(:person).returns(p1)
+    user.stubs(:login).returns('some')
+    @controller.stubs(:current_user).returns(user)
+    get :activities, :profile => p1.identifier
+    assert_response :success
+    assert_template 'activities'
+    assert assigns(:activities)
   end
 
 end

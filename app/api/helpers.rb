@@ -365,34 +365,34 @@ module Api
     ##########################################
 
     def not_found!
-      render_api_error!('404 Not found', 404)
+      render_api_error!('404 Not found', Api::Status::NOT_FOUND)
     end
 
     def forbidden!
-      render_api_error!('403 Forbidden', 403)
+      render_api_error!('403 Forbidden', Api::Status::FORBIDDEN)
     end
 
     def cant_be_saved_request!(attribute)
       message = _("(Invalid request) %s can't be saved").html_safe % attribute
-      render_api_error!(message, 400)
+      render_api_error!(message, Api::Status::BAD_REQUEST)
     end
 
     def bad_request!(attribute)
       message = _("(Invalid request) %s not given").html_safe % attribute
-      render_api_error!(message, 400)
+      render_api_error!(message, Api::Status::BAD_REQUEST)
     end
 
     def something_wrong!
       message = _("Something wrong happened")
-      render_api_error!(message, 400)
+      render_api_error!(message, Api::Status::BAD_REQUEST)
     end
 
     def unauthorized!
-      render_api_error!(_('Unauthorized'), 401)
+      render_api_error!(_('Unauthorized'), Api::Status::UNAUTHORIZED)
     end
 
     def not_allowed!
-      render_api_error!(_('Method Not Allowed'), 405)
+      render_api_error!(_('Method Not Allowed'), Api::Status::METHOD_NOT_ALLOWED)
     end
 
     # javascript_console_message is supposed to be executed as console.log()
@@ -408,7 +408,7 @@ module Api
 
     def render_api_errors!(messages)
       messages = messages.to_a if messages.class == ActiveModel::Errors
-      render_api_error!(messages.join(','), 400)
+      render_api_error!(messages.join(','), Api::Status::BAD_REQUEST)
     end
 
     ####################################################################
@@ -419,7 +419,7 @@ module Api
         vote = Vote.new(:voteable => article, :voter => current_person, :vote => value)
         return vote.save!
       rescue ActiveRecord::RecordInvalid => e
-        render_api_error!(e.message, 400)
+        render_api_error!(e.message, Api::Status::BAD_REQUEST)
         return false
       end
     end

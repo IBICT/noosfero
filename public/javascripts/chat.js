@@ -27,11 +27,14 @@ jQuery(function($) {
     conversation_prefix: 'conversation-',
     conversations_order: null,
     notification_sound: new Audio('/sounds/receive.wav'),
+    notification_counter: 0,
     window_visibility: null,
+    window_title: document.title,
     jids: {},
     rooms: {},
     no_more_messages: {},
     avatars: {},
+    favico: new Favico({animation: 'popFade'}),
 
     template: function(selector) {
       return $('#chat #chat-templates '+selector).clone().html();
@@ -162,7 +165,7 @@ jQuery(function($) {
         if(offset == 0) history.scrollTo({top:'100%', left:'0%'});
         else history.scrollTo(offset_container.height());
         if (who != "self") {
-          if ($(tab_id).find('.history:visible').length == 0) {
+          if ($(tab_id).find('.history:visible').length == 0 || !$('#chat').hasClass('opened')) {
             count_unread_messages(jid_id);
           }
           document.alert_title = name;
@@ -638,6 +641,11 @@ jQuery(function($) {
     if(jQuery('#conversations .conversation').length == 0) jQuery('.buddies a').first().click();
     jQuery('#chat').toggleClass('opened');
     jQuery('#chat-label').toggleClass('opened');
+
+    if($('#chat').hasClass('opened')) {
+      var jid_id = $('#chat-window .conversation:visible').attr('id').replace(/^conversation-/, '');
+      count_unread_messages(jid_id, true);
+    }
   }
 
   function load_conversation(jid) {
@@ -662,6 +670,12 @@ jQuery(function($) {
         return conversation;
       }
     }
+  }
+
+  function update_notification_counter() {
+    Jabber.notification_counter += 1;
+    Jabber.favico.badge(Jabber.notification_counter);
+    document.title = '(' + Jabber.notification_counter + ') ' +  Jabber.window_title;
   }
 
   function open_conversation(jid) {
@@ -881,6 +895,11 @@ jQuery(function($) {
     var name = Jabber.name_of(jid_id);
     var identifier = Strophe.getNodeFromJid(jid);
     var avatar = "/chat/avatar/"+identifier
+
+    if(window.isHidden() || !Jabber.window_visibility) {
+      update_notification_counter();
+    }
+
     if(!$('#chat').hasClass('opened') || window.isHidden() || !Jabber.window_visibility) {
       var options = {body: message.body, icon: avatar, tag: jid_id};
       $(notifyMe(name, options)).on('click', function(){
@@ -975,7 +994,12 @@ jQuery(function($) {
     return false;
   });
 
-  window.onfocus = function() {Jabber.window_visibility = true};
+  window.onfocus = function() {
+    Jabber.window_visibility = true
+    Jabber.favico.reset();
+    Jabber.notification_counter = 0;
+    document.title = Jabber.window_title;
+  };
   window.onblur = function() {Jabber.window_visibility = false};
 
   //FIXME Workaround to solve availability problems

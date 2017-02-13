@@ -297,7 +297,7 @@ class Profile < ApplicationRecord
     where('circles.id = ?', circle.id)
   }
 
-  settings_items :wall_access, :type => :string, :default => 'users'
+  settings_items :wall_access, :type => :integer, :default => AccessLevels::LEVELS[:users]
   settings_items :allow_followers, :type => :boolean, :default => true
   alias_method :allow_followers?, :allow_followers
 
@@ -853,8 +853,8 @@ private :generate_url, :url_options
   end
 
   # Adds a person as member of this Profile.
-  def add_member(person, attributes={})
-    if self.has_members? && !self.secret
+  def add_member(person, invited=false, **attributes)
+    if self.has_members? && (!self.secret || invited)
       if self.closed? && members.count > 0
         AddMember.create!(:person => person, :organization => self) unless self.already_request_membership?(person)
       else
