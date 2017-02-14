@@ -13,7 +13,6 @@ class Theme
       Rails.root.join('public', 'user_themes')
     end
 
-    #FIXME make this test
     def system_themes_dir
       Rails.root.join('public', relative_themes_dir)
     end

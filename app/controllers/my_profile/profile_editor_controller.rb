@@ -25,10 +25,7 @@ class ProfileEditorController < MyProfileController
     @possible_domains = profile.possible_domains
     @kinds = environment.kinds.where(:type => profile.type)
     if request.post?
-      if profile.person? && params[:profile_data].is_a?(Hash)
-        params[:profile_data][:fields_privacy] ||= {}
-        params[:profile_data][:custom_fields] ||= {}
-      end
+      params[:profile_data][:fields_privacy] ||= {} if profile.person? && params[:profile_data].is_a?(Hash)
       Profile.transaction do
         Image.transaction do
           begin

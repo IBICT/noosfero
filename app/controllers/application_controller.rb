@@ -11,11 +11,6 @@ class ApplicationController < ActionController::Base
   before_filter :require_login_for_environment, :if => :private_environment?
 
   before_filter :verify_members_whitelist, :if => [:private_environment?, :user]
-  before_filter :log_user
-
-  def log_user
-    Rails.logger.info "Logged in: #{user.identifier}" if user
-  end
   before_filter :redirect_to_current_user
 
   before_filter :set_session_theme

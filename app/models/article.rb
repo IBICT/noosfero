@@ -874,11 +874,6 @@ class Article < ApplicationRecord
     true
   end
 
-  # FIXME see if it's needed
-  def view_page
-    "content_viewer/view_page"
-  end
-
   def to_liquid
     HashWithIndifferentAccess.new :name => name, :abstract => abstract, :body => body, :id => id, :parent_id => parent_id, :author => author
   end
