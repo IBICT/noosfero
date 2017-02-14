@@ -175,6 +175,11 @@ class Article < ApplicationRecord
     activities
   ] 
 
+  # FIXME see if it's needed
+  def view_page
+    "content_viewer/view_page"
+  end
+
   def valid_slug
     errors.add(:title, _('is not available as article name.')) unless Article.is_slug_available?(slug)
   end
