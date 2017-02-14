@@ -109,3 +109,9 @@
 [submodule "public/designs/themes/consulta"]
 	path = public/designs/themes/consulta
 	url = https://gitlab.com/noosfero-themes/consulta.git
+[submodule "public/designs/themes/planejamento-2017"]
+	path = public/designs/themes/planejamento-2017
+	url = https://gitlab.com/noosfero-themes/planejamento-2017.git
+[submodule "public/designs/themes/planejamento-2016"]
+	path = public/designs/themes/planejamento-2016
+	url = https://gitlab.com/noosfero-themes/planejamento-2016.git
