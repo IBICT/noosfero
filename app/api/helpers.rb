@@ -118,6 +118,11 @@ module Api
       end
     end
 
+    def parse_parent_id(parent_id)
+      return nil if parent_id.blank?
+      parent_id
+    end
+
     def find_article(articles, params)
       conditions = make_conditions_with_parameter(params, Article)
       article = articles.find_by(conditions)
@@ -129,6 +134,10 @@ module Api
 
       klass_type = params[:content_type] || params[:article].delete(:type) || TextArticle.name
       return forbidden! unless klass_type.constantize <= Article
+
+      if params[:article][:uploaded_data].present?
+        params[:article][:uploaded_data] = ActionDispatch::Http::UploadedFile.new(params[:article][:uploaded_data])
+      end
 
       article = klass_type.constantize.new(params[:article])
       article.last_changed_by = current_person
@@ -217,17 +226,20 @@ module Api
     ###########################
     #        Activities       #
     ###########################
-    def find_activities(asset, method_or_relation = 'activities')
+    def find_activities(asset, method_or_relation = 'tracked_notifications')
 
       not_found! if asset.blank? || asset.secret || !asset.visible
       forbidden! if !asset.display_private_info_to?(current_person)
-
-      activities = select_filtered_collection_of(asset, method_or_relation, params)
-      activities = activities.map(&:activity)
+      if method_or_relation == 'activities'
+        activities = select_filtered_collection_of(asset, method_or_relation, params)
+        activities = activities.map(&:activity)
+      else
+        activities = select_filtered_collection_of(asset, method_or_relation, params)
+      end
       activities
     end
 
-    def present_activities_for_asset(asset, method_or_relation = 'activities')
+    def present_activities_for_asset(asset, method_or_relation = 'tracked_notifications')
       tasks = find_activities(asset, method_or_relation)
       present_activities(tasks)
     end
@@ -237,13 +249,18 @@ module Api
     end
 
     def make_conditions_with_parameter(params = {}, class_type = nil)
+
       parsed_params = class_type.nil? ? parser_params(params) : parser_params_by_type(class_type, params)
       conditions = {}
       from_date = DateTime.parse(parsed_params.delete(:from)) if parsed_params[:from]
       until_date = DateTime.parse(parsed_params.delete(:until)) if parsed_params[:until]
+
       conditions[:type] = parse_content_type(parsed_params.delete(:content_type)) unless parsed_params[:content_type].nil?
 
       conditions[:created_at] = period(from_date, until_date) if from_date || until_date
+
+      conditions[:parent_id] = parse_parent_id(parsed_params.delete(:parent_id)) if parsed_params.key? :parent_id
+
       conditions.merge!(parsed_params)
 
       conditions
@@ -325,6 +342,11 @@ module Api
       [:start_date, :end_date].each { |attribute| objects = by_period(objects, params, attribute) }
 
       objects = objects.where(conditions).where(timestamp).reorder(order)
+
+      if params[:search].present?
+        asset = objects.model.name.underscore.pluralize
+        objects = find_by_contents(asset, object, objects, params[:search])[:results]
+      end
 
       params[:page] ||= 1
       params[:per_page] ||= limit

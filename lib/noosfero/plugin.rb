@@ -1,5 +1,8 @@
-require_dependency 'noosfero'
-require 'noosfero/plugin/parent_methods'
+require_relative 'plugin/macro'
+require_relative 'plugin/hot_spot'
+require_relative 'plugin/manager'
+require_relative 'plugin/parent_methods'
+require_relative 'plugin/settings'
 
 class Noosfero::Plugin
 
@@ -66,26 +69,12 @@ class Noosfero::Plugin
       end
 
       if plugin_dependencies_ok
-        %w[
-            controllers
-            controllers/public
-            controllers/profile
-            controllers/myprofile
-            controllers/admin
-        ].each do |folder|
-          config.autoload_paths << File.join(dir, folder)
-        end
-        [ config.autoload_paths, $:].each do |path|
-          path << File.join(dir, 'models')
-          path << File.join(dir, 'lib')
-          # load vendor/plugins
-          Dir.glob(File.join(dir, '/vendor/plugins/*')).each do |vendor_plugin|
-            path << "#{vendor_plugin}/lib"
-          end
-        end
-        Dir.glob(File.join(dir, '/vendor/plugins/*')).each do |vendor_plugin|
-          init = "#{vendor_plugin}/init.rb"
-          require init.gsub(/.rb$/, '') if File.file? init
+        [config.autoload_paths, config.eager_load_paths].each do |path|
+          path.concat Dir["#{dir}/controllers/{,public,profile,myprofile,admin,concerns}"]
+          path.concat Dir["#{dir}/models{,/concerns}"]
+          path.concat Dir["#{dir}/lib"]
+          path.concat Dir["#{dir}/serializers"]
+          path.concat Dir["#{dir}/helpers"]
         end
 
         # add view path
@@ -645,6 +634,26 @@ class Noosfero::Plugin
     scope = scope.like_search(query, options) unless query.blank?
     scope = scope.send(options[:filter]) unless options[:filter].blank?
     {:results => scope.paginate(paginate_options)}
+  end
+
+  def autocomplete asset, scope, query, paginate_options={:page => 1}, options={:field => 'name'}
+    nil
+  end
+
+  def catalog_autocomplete_item_extras product
+    nil
+  end
+
+  def search_order asset
+    nil
+  end
+
+  def catalog_search_extras_begin
+    nil
+  end
+
+  def catalog_search_extras_end
+    nil
   end
 
   # -> Suggests terms based on asset and query

@@ -9,7 +9,7 @@ class Profile < ApplicationRecord
       :contact_email, :redirect_l10n, :notification_time, :redirection_after_login, :custom_url_redirection, 
       :email_suggestions, :allow_members_to_invite, :invite_friends_only, :secret, :profile_admin_mail_notification,
       :custom_fields, :region, :region_id, :allow_followers, :layout_template, :wall_access,
-      :profile_kinds, :layout_template
+      :profile_kinds, :layout_template, :tag_list
 
   extend ActsAsHavingSettings::ClassMethods
   acts_as_having_settings field: :data
@@ -17,6 +17,8 @@ class Profile < ApplicationRecord
   def settings
     data
   end
+
+  attr_accessor :old_region_id
 
   # use for internationalizable human type names in search facets
   # reimplement on subclasses
@@ -391,6 +393,7 @@ class Profile < ApplicationRecord
 
   has_many :profile_categorizations, -> { where 'categories_profiles.virtual = ?', false }
   has_many :categories, :through => :profile_categorizations
+  has_many :regions, -> { where(:type => ['Region', 'State', 'City']) }, :through => :profile_categorizations, :source => :category
 
   has_many :profile_categorizations_including_virtual, :class_name => 'ProfileCategorization'
   has_many :categories_including_virtual, :through => :profile_categorizations_including_virtual, :source => :category
@@ -421,6 +424,11 @@ class Profile < ApplicationRecord
   belongs_to :region
 
   LOCATION_FIELDS = %w[address district city state country_name zip_code]
+
+  before_save :save_old_region
+  def save_old_region
+    self.old_region_id = self.region_id_was || self.region_id
+  end
 
   def location(separator = ' - ')
     myregion = self.region
@@ -597,6 +605,8 @@ class Profile < ApplicationRecord
 
   xss_terminate :only => [ :name, :nickname, :address, :contact_phone, :description ], :on => 'validation'
   xss_terminate :only => [ :custom_footer, :custom_header ], :with => 'white_list'
+
+  include SanitizeTags
 
   include WhiteListFilter
   filter_iframes :custom_header, :custom_footer
@@ -912,8 +922,7 @@ private :generate_url, :url_options
   end
 
   def accept_category?(cat)
-    forbidden = [ Region ]
-    !forbidden.include?(cat.class)
+    true
   end
 
   include ActionView::Helpers::TextHelper
@@ -1190,7 +1199,24 @@ private :generate_url, :url_options
 
   # field => privacy (e.g.: "address" => "public")
   def fields_privacy
+    self.data[:fields_privacy] ||= {}
+    custom_field_privacy = {}
+    self.custom_field_values.includes(:custom_field).pluck("custom_fields.name", :public).to_h.map do |field, is_public|
+      custom_field_privacy[field] = 'public' if is_public
+    end
+    self.data[:fields_privacy].merge!(custom_field_privacy)
+
     self.data[:fields_privacy]
+  end
+
+  def custom_field_value(field_name)
+    value = nil
+    begin
+     value = self.send(field_name)
+    rescue NoMethodError
+      value = self.custom_field_values.by_field(field_name).pluck(:value).first
+    end
+    value
   end
 
   # abstract

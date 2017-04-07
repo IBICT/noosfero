@@ -11,6 +11,8 @@ class ProfileEditorController < MyProfileController
   helper CustomFieldsHelper
   include CategoriesHelper
 
+  include SearchTags
+
   def index
     @pending_tasks = Task.to(profile).pending.without_spam
     @show_appearance_option = user.is_admin?(environment) || environment.enabled?('enable_appearance')
@@ -59,11 +61,6 @@ class ProfileEditorController < MyProfileController
       end
       redirect_to :action => 'index'
     end
-  end
-
-  def update_categories
-    @object = profile
-    render_categories 'profile_data'
   end
 
   def header_footer

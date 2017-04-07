@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require_relative '../config/environment'
-include Noosfero::SampleDataHelper
+require_relative '../lib/sample_data'
+include SampleData
 
 id = ARGV.first || ''
 system('./script/sample-categories', id)

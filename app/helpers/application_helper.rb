@@ -1,7 +1,3 @@
-# encoding: UTF-8
-
-require 'redcloth'
-
 # Methods added to this helper will be available to all templates in the
 # application.
 module ApplicationHelper
@@ -354,17 +350,17 @@ module ApplicationHelper
 
   attr_reader :environment
 
-  def select_categories(object_name, title=nil, title_size=4)
+  def select_categories(object_name, title=nil, title_size=4, kind=:categories)
     return nil if environment.enabled?(:disable_categories)
     if title.nil?
       title = _('Categories')
     end
 
     @object = instance_variable_get("@#{object_name}")
-    @categories = environment.top_level_categories
+    @categories = environment.send("top_level_#{kind}")
+    selected_categories = @object.send(kind)
 
-    @current_categories = environment.top_level_categories.select{|i| !i.children.empty?}
-    render :partial => 'shared/select_categories_top', :locals => {:object_name => object_name, :title => title, :title_size => title_size, :multiple => true, :categories_selected => @object.categories }, :layout => false
+    render :partial => 'shared/select_categories_top', :locals => { :object_name => object_name, :title => title, :title_size => title_size, :multiple => true, :categories_selected => selected_categories, :kind => kind }, :layout => false
   end
 
   def theme_option(opt = nil)
@@ -964,7 +960,7 @@ module ApplicationHelper
     elsif page.reference_article
       source_url = link_to(page.reference_article.profile.name, page.reference_article.url)
     end
-    content_tag(:div, _('Source: %s') % source_url.html_safe, :id => 'article-source') unless source_url.nil?
+    content_tag(:div, _('Source: %s').html_safe % source_url.html_safe, :id => 'article-source') unless source_url.nil?
   end
 
   def task_information(task, params = {})

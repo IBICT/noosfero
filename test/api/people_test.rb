@@ -634,6 +634,67 @@ class PeopleTest < ActiveSupport::TestCase
     assert_equal 3, json['count']
   end
 
+  should 'add a new person friend' do
+    login_api
+    friend = create_user('friend').person
+    person.add_friend(friend)
+    friend.add_friend(person)
+    post "/api/v1/people/#{friend.id}/friends?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal json['message'], 'WAITING_APPROVAL'
+  end
+  
+  should 'remove person friend' do
+    login_api
+    friend = fast_create(Person)
+    person.add_friend(friend)
+    friend.add_friend(person)
+    delete "/api/v1/people/#{friend.id}/friends?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal json['message'], "Friend successfuly removed"
+  end  
+
+  should 'list a person friend' do
+    login_api
+    friend = fast_create(Person)
+    person.add_friend(friend)
+    friend.add_friend(person)
+    get "/api/v1/people/#{friend.id}/friends/#{person.id}?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal json['id'], person.id
+  end  
+
+  should 'search for people' do
+    person1 = fast_create(Person, :public_profile => true)
+    person2 = fast_create(Person, name: 'John Snow')
+    params[:search] = 'john'
+    get "/api/v1/people?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal [person2.id], json.map {|c| c['id']}
+  end
+
+  should 'search for people with pagination' do
+    5.times { fast_create(Person, name: 'John Snow') }
+    params[:search] = 'john'
+    params[:per_page] = 2
+    get "/api/v1/people?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal 2, json.length
+    assert_equal 5, last_response.headers['Total'].to_i
+  end
+
+  should 'search for friends' do
+    login_api
+    friend1 = fast_create(Person, name: 'John Snow')
+    person.add_friend(friend1)
+    friend2 = fast_create(Person, name: 'Other')
+    person.add_friend(friend2)
+    params[:search] = 'john'
+    get "/api/v1/people/#{person.id}/friends?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal [friend1.id], json_response_ids
+  end
+
   #####
   
   ATTRIBUTES = [:email, :country, :state, :city, :nationality, :formation, :schooling]

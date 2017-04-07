@@ -1,5 +1,4 @@
-require_relative "../test_helper"
-require 'profile_editor_controller'
+require_relative '../test_helper'
 
 class ProfileEditorControllerTest < ActionController::TestCase
   all_fixtures
@@ -82,6 +81,20 @@ class ProfileEditorControllerTest < ActionController::TestCase
     assert_response :redirect
     assert_redirected_to :controller => 'profile_editor', :action => 'index'
     assert_includes person.categories, cat2
+  end
+
+  should 'display profile categories and regions' do
+    profile_region = fast_create(Region, name: 'Profile Region')
+    region = fast_create(Region, name: 'Region')
+    category = fast_create(Category, name: 'Category')
+
+    profile.region = profile_region
+    profile.update_attributes(category_ids: [region.id, category.id])
+
+    get :edit, :profile => profile.identifier
+    assert_tag :tag => 'td', :content => profile_region.name, :ancestor => { :tag => 'table', :attributes => { :id => 'selected-categories'}}
+    assert_tag :tag => 'td', :content => region.name, :ancestor => { :tag => 'table', :attributes => { :id => 'selected-categories'}}
+    assert_tag :tag => 'td', :content => category.name, :ancestor => { :tag => 'table', :attributes => { :id => 'selected-categories'}}
   end
 
   should 'filter html from person name' do
@@ -597,13 +610,13 @@ class ProfileEditorControllerTest < ActionController::TestCase
   should 'display categories if environment disable_categories disabled' do
     Environment.any_instance.stubs(:enabled?).with(anything).returns(false)
     get :edit, :profile => profile.identifier
-    assert_tag :tag => 'div', :descendant => { :tag => 'h2', :content => 'Select the categories of your interest' }
+    assert_tag :tag => 'div', :descendant => { :tag => 'h2', :content => 'Categories of your interest' }
   end
 
   should 'not display categories if environment disable_categories enabled' do
     Environment.any_instance.stubs(:enabled?).with(anything).returns(true)
     get :edit, :profile => profile.identifier
-    assert_no_tag :tag => 'div', :descendant => { :tag => 'h2', :content => 'Select the categories of your interest' }
+    assert_no_tag :tag => 'div', :descendant => { :tag => 'h2', :content => 'Categories of your interest' }
   end
 
   should 'show a e-mail field in profile editor' do
@@ -1121,7 +1134,7 @@ class ProfileEditorControllerTest < ActionController::TestCase
 
   should 'uncheck all field privacy fields' do
     person = profile
-    assert_nil person.fields_privacy
+    assert_equal({}, person.fields_privacy)
     post :edit, :profile => profile.identifier, :profile_data => {}
     assert_equal({}, person.reload.fields_privacy)
   end
@@ -1205,5 +1218,22 @@ class ProfileEditorControllerTest < ActionController::TestCase
     profile.environment.enable(:enable_profile_url_change)
     get :edit, :profile => profile.identifier
     assert_select '#profile-identifier-formitem', 1
+  end
+
+  should 'response of search_tags be json' do
+    get :search_tags, :profile => profile.identifier, :term => 'linux'
+    assert_equal 'application/json', @response.content_type
+  end
+
+  should 'return empty json if does not find tag' do
+    get :search_tags, :profile => profile.identifier, :term => 'linux'
+    assert_equal "[]", @response.body
+  end
+
+  should 'return tags found' do
+    a = profile.articles.create(:name => 'blablabla')
+    a.tags.create! name: 'linux'
+    get :search_tags, :profile => profile.identifier, :term => 'linux'
+    assert_equal '[{"label":"linux","value":"linux"}]', @response.body
   end
 end

@@ -26,10 +26,13 @@ class Environment < ApplicationRecord
 
   has_many :tasks, :dependent => :destroy, :as => 'target'
   has_many :search_terms, :as => :context
-  has_many :custom_fields, :dependent => :destroy
   has_many :email_templates, :foreign_key => :owner_id
+  has_many :custom_fields, :dependent => :destroy
+  has_many :person_custom_fields, -> { where(customized_type: 'Person')}, class_name: 'CustomField'
+  has_many :community_custom_fields, -> { where(customized_type: 'Community')}, class_name: 'CustomField'
+  has_many :enterprise_custom_fields, -> { where(customized_type: 'Enterprise')}, class_name: 'CustomField'
 
-  IDENTIFY_SCRIPTS = /(php[0-9s]?|[sp]htm[l]?|pl|py|cgi|rb)/
+  IDENTIFY_SCRIPTS = /(php[0-9s]?|[sp]htm[l]?|pl|py|cgi|rb)/ unless const_defined?(:IDENTIFY_SCRIPTS)
 
   validates_inclusion_of :date_format,
                          :in => [ 'numbers_with_year', 'numbers',
@@ -500,6 +503,15 @@ class Environment < ApplicationRecord
     self.settings[:organization_approval_method] = actual_value
   end
 
+  def all_custom_person_fields
+    fields = self.settings[:custom_person_fields].nil? ? {} : self.settings[:custom_person_fields]
+    self.person_custom_fields.map do |cf|
+      fields[cf.name] = {'active' => cf.active.to_s, 'required' => cf.required.to_s, 'signup' => cf.signup.to_s }
+    end
+
+    fields
+  end
+
   def custom_person_fields
     self.settings[:custom_person_fields].nil? ? {} : self.settings[:custom_person_fields]
   end
@@ -560,6 +572,15 @@ class Environment < ApplicationRecord
     end
   end
 
+  def all_custom_enterprise_fields
+    fields = self.settings[:custom_enterprise_fields].nil? ? {} : self.settings[:custom_enterprise_fields]
+    self.enterprise_custom_fields.map do |cf|
+      fields[cf.name] = {'active' => cf.active.to_s, 'required' => cf.required.to_s, 'signup' => cf.signup.to_s }
+    end
+
+    fields
+  end
+
   def custom_enterprise_fields
     self.settings[:custom_enterprise_fields].nil? ? {} : self.settings[:custom_enterprise_fields]
   end
@@ -604,9 +625,19 @@ class Environment < ApplicationRecord
     signup_fields
   end
 
+  def all_custom_community_fields
+    fields = self.settings[:custom_community_fields].nil? ? {} : self.settings[:custom_community_fields]
+    self.community_custom_fields.map do |cf|
+      fields[cf.name] = {'active' => cf.active.to_s, 'required' => cf.required.to_s, 'signup' => cf.signup.to_s }
+    end
+
+    fields
+  end
+
   def custom_community_fields
     self.settings[:custom_community_fields].nil? ? {} : self.settings[:custom_community_fields]
   end
+
   def custom_community_fields=(values)
     self.settings[:custom_community_fields] = values.delete_if { |key, value| ! Community.fields.include?(key) }
     self.settings[:custom_community_fields].each_pair do |key, value|
@@ -709,6 +740,11 @@ class Environment < ApplicationRecord
     Category.top_level_for(self)
   end
 
+  # returns an array with the top level regions for this environment.
+  def top_level_regions
+    Region.top_level_for(self)
+  end
+
   # Returns the hostname of the first domain associated to this environment.
   #
   # If #force_www is true, adds 'www.' at the beginning of the hostname. If the
@@ -745,11 +781,25 @@ class Environment < ApplicationRecord
 
   has_many :events, :through => :profiles, :source => :articles, :class_name => 'Event'
 
-  has_many :tags, :through => :articles
+  has_many :article_tags, :through => :articles, :source => :tags
+  has_many :profile_tags, :through => :profiles, :source => :tags
+
+  include ScopeTool
+  scope :tags, -> environment {ScopeTool.union(environment.article_tags, environment.profile_tags)}
+
+  def tags
+    self.class.tags(self)
+  end
+
 
   def tag_counts
-    articles.tag_counts.inject({}) do |memo,tag|
+    results = articles.tag_counts.inject({}) do |memo,tag|
       memo[tag.name] = tag.count
+      memo
+    end
+
+    profiles.tag_counts.inject(results) do |memo,tag|
+      memo[tag.name].present? ? memo[tag.name] += tag.count : memo[tag.name] = tag.count
       memo
     end
   end

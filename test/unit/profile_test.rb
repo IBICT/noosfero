@@ -319,9 +319,9 @@ class ProfileTest < ActiveSupport::TestCase
     second  = create(Article, :profile => profile, :tag_list => 'first-tag, second-tag')
     third   = create(Article, :profile => profile, :tag_list => 'first-tag, second-tag, third-tag')
 
-    assert_equivalent [ first, second, third], profile.tagged_with('first-tag')
-    assert_equivalent [ second, third ], profile.tagged_with('second-tag')
-    assert_equivalent [ third], profile.tagged_with('third-tag')
+    assert_equivalent [ first, second, third], profile.articles.tagged_with('first-tag')
+    assert_equivalent [ second, third ], profile.articles.tagged_with('second-tag')
+    assert_equivalent [ third], profile.articles.tagged_with('third-tag')
   end
 
   should 'provide tag count' do
@@ -586,7 +586,7 @@ class ProfileTest < ActiveSupport::TestCase
     assert_equal region, profile.region
   end
 
-  should 'categorized automatically in its region' do
+  should 'also add the profile region to the categories list' do
     region = fast_create(Region)
     profile = create(Profile, :region => region)
 
@@ -633,6 +633,7 @@ class ProfileTest < ActiveSupport::TestCase
     category = fast_create(Category, :parent_id => pcat.id)
     profile = create(Profile, :region => region, :category_ids => [category.id])
 
+    assert_equal region, profile.region
     assert_equivalent [region, category], profile.categories(true)
     assert_equivalent [region, category, pcat], profile.categories_including_virtual(true)
   end
@@ -663,8 +664,31 @@ class ProfileTest < ActiveSupport::TestCase
     assert_includes profile.categories_including_virtual(true), pcat
   end
 
-  should 'not accept region as a category' do
-    refute Profile.new.accept_category?(Region.new)
+  should 'accept region as a category' do
+    assert Profile.new.accept_category?(Region.new)
+  end
+
+  should 'accept several category regions besides the profile region' do
+    profile_region = fast_create(Region)
+    region1 = fast_create(Region)
+    region2 = fast_create(Region)
+
+    profile = create(Profile, :region => profile_region)
+    profile.add_category(region1)
+    profile.add_category(region2)
+
+    assert_equivalent [profile_region, region1, region2], profile.categories(true)
+  end
+
+  should 'not remove region categories if profile region is updated' do
+    profile_region1 = fast_create(Region)
+    profile_region2 = fast_create(Region)
+    region1 = fast_create(Region)
+    region2 = fast_create(Region)
+    profile = create(Profile, region: profile_region1, category_ids: [region1.id, region2.id])
+
+    profile.update_attribute(:region, profile_region2)
+    assert_equivalent [profile_region2, region1, region2], profile.categories(true)
   end
 
   should 'query region for location' do
@@ -2046,6 +2070,22 @@ class ProfileTest < ActiveSupport::TestCase
     assert_equal f, p.fields_privacy
   end
 
+  should 'fields_privacy return an empty hash instead of nil' do
+    p = fast_create(Profile)
+    expected = {}
+    assert_equal expected, p.fields_privacy
+  end
+
+  should 'fields_privacy return privacy of custom field elements' do
+    CustomField.create!(:name => "rating", :format => "string", :customized_type => "Community", :active => true, :environment => Environment.default)
+    c = fast_create(Community)
+    c.custom_values = { "rating" => { "value" => "Five stars", "public" => "true"} }
+    c.save!
+    expected = {'rating' => 'public'}
+    assert_equal expected, c.fields_privacy
+  end
+
+
   should 'not display field if field is active but not public and user not logged in' do
     profile = fast_create(Profile)
     profile.stubs(:active_fields).returns(['field'])
@@ -2315,5 +2355,35 @@ class ProfileTest < ActiveSupport::TestCase
     assert_includes profile.kinds, to_add1
     assert_includes profile.kinds, to_add2
     assert profile.profile_kinds.blank?
+  end
+
+  should 'custom_field_value return the value of custom field values' do
+    CustomField.create!(:name => "rating", :format => "string", :customized_type => "Community", :active => true, :environment => Environment.default)
+    c = fast_create(Community)
+    c.custom_values = { "rating" => { "value" => "Five stars", "public" => "true"} }
+    c.save!
+    assert_equal 'Five stars', c.custom_field_value('rating')
+  end
+
+  should 'custom_field_value return the value of custom field values passsing symbol as parameter' do
+    CustomField.create!(:name => "rating", :format => "string", :customized_type => "Community", :active => true, :environment => Environment.default)
+    c = fast_create(Community)
+    c.custom_values = { "rating" => { "value" => "Five stars", "public" => "true"} }
+    c.save!
+    assert_equal 'Five stars', c.custom_field_value(:rating)
+  end
+
+  should 'custom_field_value return the value of custom values' do
+    c = fast_create(Community)
+    c.description = 'some description'
+    c.save!
+    assert_equal 'some description', c.custom_field_value('description')
+  end
+
+  should 'custom_field_value return the value of custom values passing symbol as paremeter' do
+    c = fast_create(Community)
+    c.description = 'some description'
+    c.save!
+    assert_equal 'some description', c.custom_field_value(:description)
   end
 end

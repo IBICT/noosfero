@@ -1,5 +1,4 @@
-require_relative "../test_helper"
-require 'cms_controller'
+require_relative '../test_helper'
 
 class CmsControllerTest < ActionController::TestCase
 
@@ -2036,6 +2035,26 @@ class CmsControllerTest < ActionController::TestCase
       get :edit, profile: profile.identifier, id: article.id
       assert assigns(:no_design_blocks)
     end
+  end
+
+  should 'save and display correct authors for article versions' do
+    community = fast_create(Community)
+    author1 = create_user('test1').person
+    author2 = create_user('test2').person
+
+    community.add_admin(author1)
+    community.add_admin(author2)
+    login_as(author1.identifier)
+    post :new, :type => 'TextArticle', :profile => community.identifier,
+               :article => { :name => 'Main Article', :body => 'some content' }
+
+    article = community.articles.last
+    @controller.stubs(:user).returns(author2)
+    post :edit, :id => article.id, :profile => community.identifier,
+               :article => { :name => 'Main Article', :body => 'edited' }
+
+    assert_equal 2, article.versions.count
+    assert_equivalent [author1.id, author2.id], article.versions.map(&:last_changed_by_id)
   end
 
   protected

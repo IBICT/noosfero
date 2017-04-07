@@ -35,6 +35,10 @@ module Api
       post "/login" do
         begin
           user ||= User.authenticate(params[:login], params[:password], environment)
+          @plugins.each do |plugin|
+            user ||= plugin.alternative_authentication
+            break unless user.nil?
+          end
         rescue User::UserNotActivated => e
           render_api_error!(e.message, Api::Status::UNAUTHORIZED)
         end
