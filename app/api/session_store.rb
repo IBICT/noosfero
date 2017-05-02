@@ -1,7 +1,8 @@
 ## A session store for the API. It can store
 ## generic data on the Rails Cache to simulate
 ## a stateful session for API methods
-class Noosfero::API::SessionStore
+module Api
+class SessionStore
 
   ## A generic data value to allow storing any 
   ## value within this SessionStore
@@ -18,7 +19,7 @@ class Noosfero::API::SessionStore
   ## private_token in the form: client_key#private_token
   def self.create(client_key = nil)
     private_token = SecureRandom.hex
-    store = Noosfero::API::SessionStore.new(client_key, private_token)
+    store = SessionStore.new(client_key, private_token)
     Rails.cache.write(store.key, store, expires_in: 300)
     return store
   end
@@ -50,4 +51,5 @@ class Noosfero::API::SessionStore
     Rails.cache.delete(@key)
   end
 
+end
 end

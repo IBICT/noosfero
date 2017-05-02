@@ -218,7 +218,6 @@ class ArticlesTest < ActiveSupport::TestCase
 
     post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
     json = JSON.parse(last_response.body)
-
     assert_not_equal 401, last_response.status
     assert_equal true, json['vote']
   end
@@ -825,7 +824,7 @@ class ArticlesTest < ActiveSupport::TestCase
     params[:until_start_date] = Time.now + 1.day
     get "/api/v1/articles/?#{params.to_query}"
     json = JSON.parse(last_response.body)
-    assert_equal json["articles"].map { |a| a["id"] }, [article1.id]
+    assert_equal json.map { |a| a["id"] }, [article1.id]
   end
 
   should 'list events with period for end date' do
@@ -835,7 +834,7 @@ class ArticlesTest < ActiveSupport::TestCase
     params[:from_end_date] = Time.now + 1.day
     get "/api/v1/articles/?#{params.to_query}"
     json = JSON.parse(last_response.body)
-    assert_equal json["articles"].map { |a| a["id"] }, [article2.id]
+    assert_equal json.map { |a| a["id"] }, [article2.id]
   end
 
   should 'list article permissions when get an article' do
