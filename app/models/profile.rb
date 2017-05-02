@@ -29,8 +29,6 @@ class Profile < ApplicationRecord
     :display => %w[compact]
   }
 
-  settings_items :custom_fields, :default => {}
-
   def custom_field_value(field)
     if !self.custom_fields.blank?
       self.custom_fields[field][:value]
@@ -236,6 +234,8 @@ class Profile < ApplicationRecord
   settings_items :fields_privacy, :type => :hash, :default => {}
   settings_items :email_suggestions, :type => :boolean, :default => false
   settings_items :profile_admin_mail_notification, :type => :boolean, :default => true
+  settings_items :custom_fields, :default => {}
+
 
   settings_items :profile_kinds, :type => :hash, :default => {}
   after_save do |profile|
