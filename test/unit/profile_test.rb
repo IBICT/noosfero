@@ -2129,18 +2129,6 @@ class ProfileTest < ActiveSupport::TestCase
     profile.may_display_field_to?('bundle', user)
   end
 
-  # TODO Eventually we would like to specify it in a deeper granularity...
-  should 'not display location if any field is private' do
-    user = fast_create(Person)
-    profile = fast_create(Profile)
-    profile.stubs(:active_fields).returns(Profile::LOCATION_FIELDS)
-    Profile::LOCATION_FIELDS.each { |field| profile.stubs(:may_display_field_to?).with(field, user).returns(true)}
-    assert profile.may_display_location_to?(user)
-
-    profile.stubs(:may_display_field_to?).with(Profile::LOCATION_FIELDS[0], user).returns(false)
-    refute profile.may_display_location_to?(user)
-  end
-
   should 'destroy profile if its environment is destroyed' do
     environment = fast_create(Environment)
     profile = fast_create(Profile, :environment_id => environment.id)
@@ -2385,5 +2373,25 @@ class ProfileTest < ActiveSupport::TestCase
     c.description = 'some description'
     c.save!
     assert_equal 'some description', c.custom_field_value(:description)
+  end
+
+  should 'list available blocks' do
+    profile = Profile.new
+    person = create_user('mytestuser').person
+    assert_includes profile.available_blocks(person), ArticleBlock
+  end
+
+  should 'list BlogArchivesBlock as available block when profile has a blog' do
+    profile = Profile.new
+    profile.expects(:has_blog?).returns(true)
+    person = create_user('mytestuser').person
+    assert_includes profile.available_blocks(person), BlogArchivesBlock
+  end
+
+  should 'list RawHTMLBlock as available block when person has permission' do
+    profile = fast_create(Profile)
+    person = create_user('mytestuser').person
+    profile.environment.add_admin(person)
+    assert_includes profile.available_blocks(person), RawHTMLBlock
   end
 end

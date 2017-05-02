@@ -226,7 +226,7 @@ module Api
           suggest_article.requestor = current_person
 
           unless suggest_article.save
-            render_api_errors!(suggest_article.article_object.errors.full_messages)
+            render_model_errors!(suggest_article.article_object.errors)
           end
           present_partial suggest_article, :with => Entities::Task
         end

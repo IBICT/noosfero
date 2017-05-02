@@ -829,7 +829,8 @@ class PersonTest < ActiveSupport::TestCase
   end
 
   should "the person see all of your scraps" do
-    person = fast_create(Person)
+    person = create_user.person
+    User.current = person.user
     s1 = fast_create(Scrap, :sender_id => person.id)
     assert_equal [s1], person.scraps
     s2 = fast_create(Scrap, :sender_id => person.id)
@@ -2086,4 +2087,19 @@ class PersonTest < ActiveSupport::TestCase
     assert person.save
   end
 
+  should 'not validate if location is required and lat and lng are not provided' do
+    person = create_user('testuser').person
+    Environment.any_instance.stubs(:required_person_fields).returns(['location'])
+    refute person.valid?
+
+    person.lat = 30
+    person.lng = 40
+    assert person.valid?
+  end
+
+  should 'list available blocks' do
+    profile = Person.new
+    person = create_user('mytestuser').person
+    assert_includes profile.available_blocks(person), CommunitiesBlock
+  end
 end

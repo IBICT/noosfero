@@ -234,7 +234,7 @@ class ArticlesTest < ActiveSupport::TestCase
     post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
     json = JSON.parse(last_response.body)
     ## The api should not allow to save this vote
-    assert_equal 400, last_response.status
+    assert_equal Api::Status::UNPROCESSABLE_ENTITY, last_response.status
   end
 
   should 'perform a vote in a article identified by id' do
@@ -252,7 +252,7 @@ class ArticlesTest < ActiveSupport::TestCase
     article = fast_create(Article, :profile_id => @person.id, :name => "Some thing", :archived => true)
     @params[:value] = 1
     post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
-    assert_equal 400, last_response.status
+    assert_equal Api::Status::UNPROCESSABLE_ENTITY, last_response.status
   end
 
 <<<<<<< HEAD
@@ -918,4 +918,16 @@ class ArticlesTest < ActiveSupport::TestCase
     json = JSON.parse(last_response.body)
     assert_equivalent [article1.id, article2.id], json.map { |a| a["id"] }
   end
+
+  should "match error messages" do
+    profile = fast_create(Community, :environment_id => environment.id)
+    give_permission(user.person, 'post_content', profile)
+    params[:article] = {:name => ""}
+    post "/api/v1/communities/#{profile.id}/articles?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal ({"name" => [{"error"=>"blank"}]}), json["errors_details"]
+    assert_equal ({"name"=>["can't be blank"]}), json["errors_messages"]
+    assert_equal (["Title can't be blank"]), json["full_messages"]
+  end
+
 end

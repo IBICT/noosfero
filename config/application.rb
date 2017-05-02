@@ -6,8 +6,7 @@ require 'rails/all'
 # Silence Rails 5 deprecation warnings
 ActiveSupport::Deprecation.silenced = true
 
-Bundler.require(:default, :assets, Rails.env)
-$: << File.expand_path('../lib', File.dirname(__FILE__))
+Bundler.require :default, :assets, Rails.env
 
 # init dependencies at vendor, loaded at the Gemfile
 $: << 'vendor/plugins'
@@ -17,11 +16,10 @@ vendor.each do |dir|
   require_relative "../#{init_rb}" if File.file? init_rb
 end
 
-require_dependency 'extensions'
-
-require_dependency 'noosfero'
-require_dependency 'noosfero/plugin'
-require_dependency 'noosfero/multi_tenancy'
+require_relative '../lib/extensions'
+require_relative '../lib/noosfero'
+require_relative '../lib/noosfero/plugin'
+require_relative '../lib/noosfero/multi_tenancy'
 
 module Noosfero
   class Application < Rails::Application
@@ -52,7 +50,6 @@ module Noosfero
       path << config.root.join('app')
       path << config.root.join('app/sweepers')
       path.concat Dir["#{config.root}/app/controllers/**/"]
-      path << config.root.join('test', 'mocks', Rails.env) if Rails.env.test?
     end
 
     # Only load the plugins named here, in the order given (default is alphabetical).

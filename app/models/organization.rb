@@ -37,7 +37,7 @@ class Organization < Profile
   scope :visible_for_person, lambda { |person|
 	    listed_for_person(person).where( ['
         ( ( role_assignments.accessor_type = ? AND role_assignments.accessor_id = ? ) OR
-          ( profiles.enabled = ? AND profiles.public_profile = ? ) )',      
+          ( profiles.enabled = ? AND profiles.public_profile = ? ) )',
       Profile.name, person.id,  true, true]
     )
   }
@@ -65,7 +65,7 @@ class Organization < Profile
 
   has_many :custom_roles, :class_name => 'Role', :foreign_key => :profile_id
 
-  scope :more_popular, -> { order 'members_count DESC' }
+  scope :more_popular, -> { order 'profiles.members_count DESC' }
 
   validate :presence_of_required_fieds, :unless => :is_template
 
@@ -118,16 +118,11 @@ class Organization < Profile
     legal_form
     economic_activity
     management_information
-    address
-    zip_code
-    city
-    state
-    country
     template_id
-    district
     address_line2
     address_reference
     profile_kinds
+    location
   ]
 
   def self.fields

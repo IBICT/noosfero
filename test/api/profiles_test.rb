@@ -129,9 +129,9 @@ class ProfilesTest < ActiveSupport::TestCase
     some_person = create_user('testuser', { :email => "lappis@unb.br" }).person
     some_person.description = 'some description'
     set_profile_field_privacy(some_person,'description', 'public')
- 
+
     some_person.save!
-	
+
     get "/api/v1/profiles/#{some_person.id}?#{params.to_query}"
     json = JSON.parse(last_response.body)
     assert json['additional_data'].has_key?('description')
@@ -139,25 +139,25 @@ class ProfilesTest < ActiveSupport::TestCase
   end
 
   should 'not display private fields to anonymous' do
-    set_profile_field_privacy(person,'state', 'private_content')
-    person.state = 'some state' 
+    set_profile_field_privacy(person, 'nickname', 'private_content')
+    person.nickname = 'nickname'
 
     get "/api/v1/profiles/#{person.id}/?#{params.to_query}"
     json = JSON.parse(last_response.body)
 
-    assert !json['additional_data'].has_key?('state')
+    assert !json['additional_data'].has_key?('nickname')
   end
 
   should 'display private fields to self' do
     login_api
 
-    set_profile_field_privacy(person,'state', 'private_content')
-    person.state = 'some state' 
+    set_profile_field_privacy(person, 'nickname', 'private_content')
+    person.nickname = 'nickname'
 
     get "/api/v1/profiles/#{person.id}/?#{params.to_query}"
     json = JSON.parse(last_response.body)
 
-    assert json['additional_data'].has_key?('state')
+    assert json['additional_data'].has_key?('nickname')
   end
 
   should 'display private custom fields to self' do
@@ -216,9 +216,9 @@ class ProfilesTest < ActiveSupport::TestCase
 
   should 'not display private custom fields to logged in user' do
     login_api
-    
+
     CustomField.create!(:name => "Rating", :format => "string", :customized_type => "Community", :active => true, :environment => Environment.default)
-    some_profile = fast_create(Community, public_profile: false) 
+    some_profile = fast_create(Community, public_profile: false)
     some_profile.custom_values = { "Rating" => { "value" => "Five stars", "public" => "false"} }
     some_profile.save!
 
@@ -341,8 +341,71 @@ class ProfilesTest < ActiveSupport::TestCase
     params[:profile][:identifier] = other_person.identifier
     post "/api/v1/profiles/#{person.id}?#{params.to_query}"
     json = JSON.parse(last_response.body)
-    assert_equal 400, last_response.status
-    assert_equal "blank", json['message']['name'].first['error']
-    assert_equal "not_available", json['message']['identifier'].first['error']
+    assert_equal Api::Status::UNPROCESSABLE_ENTITY, last_response.status
+    assert_equal "blank", json['errors_details']['name'].first['error']
+    assert_equal "not_available", json['errors_details']['identifier'].first['error']
   end
+
+  should 'add block in a profile' do
+    login_api
+    community = fast_create(Community)
+    community.add_member(person)
+    community.boxes << Box.new
+
+    block = { title: 'test', type: RawHTMLBlock }
+    params.merge!({profile: {boxes_attributes: [{id: community.boxes.first.id, blocks_attributes: [block] }] } })
+    post "/api/v1/profiles/#{community.id}?#{params.to_query}"
+    assert_equal ['test'], community.reload.blocks.map(&:title)
+    assert_equal ['RawHTMLBlock'], community.reload.blocks.map(&:type)
+  end
+
+  should 'remove blocks in a profile' do
+    login_api
+    community = fast_create(Community)
+    community.add_member(person)
+    community.boxes << Box.new
+    community.boxes.first.blocks << Block.new(title: 'test')
+    block = { id: community.boxes.first.blocks.first.id, _destroy: true }
+    params.merge!({profile: {boxes_attributes: [{id: community.boxes.first.id, blocks_attributes: [block] }] } })
+    post "/api/v1/profiles/#{community.id}?#{params.to_query}"
+    assert community.reload.blocks.empty?
+  end
+
+  should 'edit block in a profile' do
+    login_api
+    community = fast_create(Community)
+    community.add_member(person)
+    community.boxes << Box.new
+    community.boxes.first.blocks << Block.new(title: 'test')
+
+    block = { id: community.boxes.first.blocks.first.id, title: 'test 2' }
+    params.merge!({profile: {boxes_attributes: [{id: community.boxes.first.id, blocks_attributes: [block] }] } })
+    post "/api/v1/profiles/#{community.id}?#{params.to_query}"
+    assert_equal ['test 2'], community.reload.blocks.map(&:title)
+  end
+
+  should 'edit block position in a profile' do
+    login_api
+    community = fast_create(Community)
+    community.add_member(person)
+    community.boxes << Box.new
+    community.boxes.first.blocks << Block.new(title: 'test')
+
+    block = { id: community.boxes.first.blocks.first.id, position: 2 }
+    params.merge!({profile: {boxes_attributes: [{id: community.boxes.first.id, blocks_attributes: [block] }] } })
+    post "/api/v1/profiles/#{community.id}?#{params.to_query}"
+    assert_equal [2], community.reload.blocks.map(&:position)
+  end
+
+  should "match error messages" do
+    login_api
+    params[:profile] = {}
+    params[:profile][:name] = ''
+    post "/api/v1/profiles/#{person.id}?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal ({"name" => [{"error"=>"blank"}]}), json["errors_details"]
+    assert_equal ({"name"=>["can't be blank"]}), json["errors_messages"]
+    assert_equal (["Name can't be blank"]), json["full_messages"]
+  end
+
 end

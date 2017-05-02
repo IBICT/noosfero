@@ -4,8 +4,9 @@ class Box < ApplicationRecord
 
   belongs_to :owner, :polymorphic => true
   has_many :blocks, -> { order 'position' }, dependent: :destroy
+  accepts_nested_attributes_for :blocks, allow_destroy: true
 
-  attr_accessible :owner
+  attr_accessible :owner, :blocks_attributes
 
   include Noosfero::Plugin::HotSpot
 
@@ -73,10 +74,17 @@ class Box < ApplicationRecord
     ]
   end
 
+  def blocks_attributes=(attributes)
+    attributes.select { |b| b[:id].nil? }.each do |b|
+      block = b.delete(:type).constantize.new(b)
+      self.blocks << block
+    end
+    assign_nested_attributes_for_collection_association(:blocks, attributes.reject { |b| b[:id].nil? }.map { |b| b.except(:type) })
+  end
+
   private
 
   def to_css_selector(blocks_classes)
     blocks_classes.map{ |block_class| ".#{block_class.name.to_css_class}" }.join(',')
   end
-
 end

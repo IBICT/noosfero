@@ -87,6 +87,13 @@ module Api
       expose :parent_id
     end
 
+    class BlockDefinition < Entity
+      expose :description
+      expose :short_description
+      expose :pretty_name, as: :name
+      expose :name, as: :type
+    end
+
     class Block < Entity
       expose :id, :type, :settings, :position, :enabled
       expose :mirror, :mirror_block_id, :title
@@ -178,7 +185,7 @@ module Api
         community.admins.map{|admin| {"name"=>admin.name, "id"=>admin.id, "username" => admin.identifier}}
       end
       expose :categories, :using => Category
-      expose :members_count
+      expose :members_count, :closed
       expose :members, :if => lambda {|community, options| Entities.expose_optional_field?(:members, options)}
     end
 
@@ -310,6 +317,7 @@ module Api
 
     class Tag < Entity
       expose :name
+      expose :taggings_count, as: :count
     end
 
     class Activity < Entity
@@ -357,5 +365,16 @@ module Api
         type_map.first.represent(domain.owner, options) unless type_map.nil?
       end
     end
+
+    class Response < Entity
+      expose :success
+      expose :code
+      expose :message
+    end
+
+    class Setting < Entity
+      expose :available_blocks, :using => BlockDefinition
+    end
+
   end
 end

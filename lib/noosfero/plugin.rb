@@ -632,7 +632,7 @@ class Noosfero::Plugin
   # own use in specific views
   def find_by_contents(asset, scope, query, paginate_options={}, options={})
     scope = scope.like_search(query, options) unless query.blank?
-    scope = scope.send(options[:filter]) unless options[:filter].blank?
+    scope = scope.send(options[:filter]) unless options[:filter].blank? || options[:filter] == 'more_relevant'
     {:results => scope.paginate(paginate_options)}
   end
 
@@ -694,6 +694,12 @@ class Noosfero::Plugin
   #By default will return nil that will mean not implented by the plugin
   def verify_captcha(*args)
     nil
+  end 
+
+  # -> Displays the facets view side box
+  # returns = true or false
+  def search_facets?
+    false
   end
 
   # -> Adds additional blocks to profiles and environments.
@@ -800,6 +806,3 @@ class Noosfero::Plugin
 
 end
 
-require 'noosfero/plugin/hot_spot'
-require 'noosfero/plugin/manager'
-require 'noosfero/plugin/settings'

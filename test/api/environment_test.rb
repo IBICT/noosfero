@@ -192,5 +192,60 @@ class EnvironmentTest < ActiveSupport::TestCase
     assert_equal Api::Status::DEPRECATED, last_response.status
   end
 
+  should 'add block in environment' do
+    login_api
+    environment = Environment.default
+    environment.add_admin(person)
+    environment.boxes << Box.new
 
+    block = { title: 'test', type: RawHTMLBlock }
+    params[:environment] = { boxes_attributes: [{id: environment.boxes.first.id, blocks_attributes: [block] }] }
+    post "/api/v1/environments/#{environment.id}?#{params.to_query}"
+    assert_equal ['test'], environment.reload.blocks.map(&:title)
+    assert_equal ['RawHTMLBlock'], environment.reload.blocks.map(&:type)
+  end
+
+  should 'remove blocks from environment' do
+    login_api
+    environment = Environment.default
+    environment.add_admin(person)
+    environment.boxes << Box.new
+    environment.boxes.first.blocks << Block.new(title: 'test')
+    block = { id: environment.boxes.first.blocks.first.id, _destroy: true }
+    params[:environment] = { boxes_attributes: [{id: environment.boxes.first.id, blocks_attributes: [block] }] }
+    post "/api/v1/environments/#{environment.id}?#{params.to_query}"
+    assert environment.reload.blocks.empty?
+  end
+
+  should 'edit block from environment' do
+    login_api
+    environment = Environment.default
+    environment.add_admin(person)
+    environment.boxes << Box.new
+    environment.boxes.first.blocks << Block.new(title: 'test')
+
+    block = { id: environment.boxes.first.blocks.first.id, title: 'test 2' }
+    params[:environment] = { boxes_attributes: [{id: environment.boxes.first.id, blocks_attributes: [block] }] }
+    post "/api/v1/environments/#{environment.id}?#{params.to_query}"
+    assert_equal ['test 2'], environment.reload.blocks.map(&:title)
+  end
+
+  should 'edit block position from environment' do
+    login_api
+    environment = Environment.default
+    environment.add_admin(person)
+    environment.boxes << Box.new
+    environment.boxes.first.blocks << Block.new(title: 'test')
+
+    block = { id: environment.boxes.first.blocks.first.id, position: 2 }
+    params[:environment] = { boxes_attributes: [{id: environment.boxes.first.id, blocks_attributes: [block] }] }
+    post "/api/v1/environments/#{environment.id}?#{params.to_query}"
+    assert_equal [2], environment.reload.blocks.map(&:position)
+  end
+
+  should 'list available blocks' do
+    environment = Environment.default
+    person = create_user('mytestuser').person
+    assert_includes environment.available_blocks(person), CommunitiesBlock
+  end
 end
