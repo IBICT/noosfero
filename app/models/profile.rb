@@ -7,16 +7,8 @@ class Profile < ApplicationRecord
       :contact_phone, :image_builder, :top_image_builder, :description, :closed, :template_id, :environment, :lat, :lng, :is_template, 
       :fields_privacy, :preferred_domain_id, :category_ids, :country, :city, :state, :national_region_code, :email, 
       :contact_email, :redirect_l10n, :notification_time, :redirection_after_login, :custom_url_redirection, 
-      :email_suggestions, :allow_members_to_invite, :invite_friends_only, :secret, :profile_admin_mail_notification,
-      :custom_fields, :region, :region_id, :allow_followers, :layout_template, :wall_access,
-      :profile_kinds, :layout_template, :tag_list
-
-  extend ActsAsHavingSettings::ClassMethods
-  acts_as_having_settings field: :data
-
-  def settings
-    data
-  end
+      :layout_template, :email_suggestions, :allow_members_to_invite, :invite_friends_only, :secret, :profile_admin_mail_notification,
+      :allow_followers, :wall_access, :profile_kinds, :tag_list, :boxes_attributes, :custom_fields, :region, :region_id
 
   attr_accessor :old_region_id
 
@@ -36,8 +28,6 @@ class Profile < ApplicationRecord
     :order => %w[more_recent],
     :display => %w[compact]
   }
-
-  settings_items :custom_fields, :default => {}
 
   def custom_field_value(field)
     if !self.custom_fields.blank?
@@ -244,6 +234,8 @@ class Profile < ApplicationRecord
   settings_items :fields_privacy, :type => :hash, :default => {}
   settings_items :email_suggestions, :type => :boolean, :default => false
   settings_items :profile_admin_mail_notification, :type => :boolean, :default => true
+  settings_items :custom_fields, :default => {}
+
 
   settings_items :profile_kinds, :type => :hash, :default => {}
   after_save do |profile|
@@ -282,8 +274,8 @@ class Profile < ApplicationRecord
 
   # subclass specific
   scope :more_popular, -> { }
-  scope :more_active, -> { order 'activities_count DESC' }
-  scope :more_recent, -> { order "created_at DESC" }
+  scope :more_active, -> { order 'profiles.activities_count DESC' }
+  scope :more_recent, -> { order "profiles.created_at DESC" }
 
   scope :followed_by, -> person{
     distinct.select('profiles.*').
@@ -1190,13 +1182,6 @@ private :generate_url, :url_options
     end
   end
 
-  def may_display_location_to? user = nil
-    LOCATION_FIELDS.each do |field|
-      return false if !self.may_display_field_to? field, user
-    end
-    return true
-  end
-
   # field => privacy (e.g.: "address" => "public")
   def fields_privacy
     self.data[:fields_privacy] ||= {}
@@ -1281,5 +1266,14 @@ private :generate_url, :url_options
 
   def in_circle?(circle, follower)
     ProfileFollower.with_follower(follower).with_circle(circle).with_profile(self).present?
+  end
+
+  def available_blocks(person)
+    blocks = [ ArticleBlock, TagsCloudBlock, InterestTagsBlock, RecentDocumentsBlock, ProfileInfoBlock, LinkListBlock, MyNetworkBlock, FeedReaderBlock, ProfileImageBlock, LocationBlock, SlideshowBlock, ProfileSearchBlock, HighlightsBlock, MenuBlock ]
+    # block exclusive to profiles that have blog
+    blocks << BlogArchivesBlock if self.has_blog?
+    # block exclusive for environment admin
+    blocks << RawHTMLBlock if person.present? && person.is_admin?(self.environment)
+    blocks
   end
 end

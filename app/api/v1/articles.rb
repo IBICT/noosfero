@@ -126,7 +126,7 @@ module Api
           value = (params[:value] || 1).to_i
           # FIXME verify allowed values
           render_api_error!('Vote value not allowed', Api::Status::BAD_REQUEST) unless [-1, 1].include?(value)
-          article = find_article(environment.articles, params[:id])
+          article = find_article(environment.articles, {:id => params[:id]})
           ## If login with captcha
           if @current_tmp_user
             # Vote allowed only if data does not include this article
@@ -226,7 +226,7 @@ module Api
           suggest_article.requestor = current_person
 
           unless suggest_article.save
-            render_api_errors!(suggest_article.article_object.errors.full_messages)
+            render_model_errors!(suggest_article.article_object.errors)
           end
           present_partial suggest_article, :with => Entities::Task
         end

@@ -15,7 +15,7 @@ class Environment < ApplicationRecord
                   :members_whitelist, :highlighted_news_amount,
                   :portal_news_amount, :date_format, :signup_intro,
                   :enable_feed_proxy, :http_feed_proxy, :https_feed_proxy,
-                  :disable_feed_ssl, :disabled_blocks, :layout_template
+                  :disable_feed_ssl, :layout_template, :boxes_attributes, :disabled_blocks
 
   has_many :users
 
@@ -792,7 +792,7 @@ class Environment < ApplicationRecord
   end
 
 
-  def tag_counts
+  def environment_tags
     results = articles.tag_counts.inject({}) do |memo,tag|
       memo[tag.name] = tag.count
       memo
@@ -1070,6 +1070,12 @@ class Environment < ApplicationRecord
 
   def permissions_for(person)
     person.role_assignments.where(resource: self).map {|ra| ra.role.permissions}.flatten.uniq
+  end
+
+  def available_blocks(person)
+    [ ArticleBlock, LoginBlock, RecentDocumentsBlock, EnterprisesBlock,
+      CommunitiesBlock, LinkListBlock, FeedReaderBlock, SlideshowBlock,
+      HighlightsBlock, CategoriesBlock, RawHTMLBlock, TagsCloudBlock ]
   end
 
   private

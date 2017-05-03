@@ -297,51 +297,6 @@ class InviteControllerTest < ActionController::TestCase
     end
   end
 
-  should 'add registered users by id imediatly instead invite if logged user is a environment admin' do
-
-    #Add user like a environment admin
-    Environment.default.add_admin profile
-
-    friend1 = create_user('testuser1').person
-    friend2 = create_user('testuser2').person
-
-    assert_difference 'Delayed::Job.count', 1 do
-      assert_equal 0,community.members.count
-
-      post :invite_registered_friend, :profile => @community.identifier, :q => "#{friend1.id},#{friend2.id}"
-
-      assert_response :redirect
-      assert_redirected_to :controller => 'profile', :action => 'members'
-    end
-
-    Delayed::Worker.new.run(Delayed::Job.last)
-
-    assert_equal 2,community.members.count
-
-  end
-
-  should 'add registered users by email imediatly instead invite if logged user is a environment admin' do
-
-    Environment.default.add_admin profile
-
-    friend1 = create_user('testuser1', {email: 'friend1@test.com.br'})
-    friend2 = create_user('testuser2', {email: 'friend2@test.com.br'})
-
-    assert_difference 'Delayed::Job.count', 1 do
-      assert_equal 0,community.members.count
-
-      post :invite_registered_friend, :profile => @community.identifier, :q => "#{friend1.email},#{friend2.email}"
-
-      assert_response :redirect
-      assert_redirected_to :controller => 'profile', :action => 'members'
-    end
-
-    Delayed::Worker.new.run(Delayed::Job.last)
-
-    assert_equal 2,community.members.count
-
-  end
-
   private
 
   def json_response

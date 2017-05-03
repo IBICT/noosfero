@@ -132,7 +132,7 @@ class SearchController < PublicController
   def tags
     @tags_cache_key = "tags_env_#{environment.id.to_s}"
     if is_cache_expired?(@tags_cache_key)
-      @tags = environment.tag_counts
+      @tags = environment.environment_tags
     end
   end
 
@@ -244,7 +244,9 @@ class SearchController < PublicController
   end
 
   def full_text_search
-    @searches[@asset] = find_by_contents(@asset, environment, @scope, @query, paginate_options, {:category => @category, :tag => @tag, :filter => @order, :template_id => params[:template_id]})
+    @searches[@asset] = find_by_contents(@asset, environment, @scope, @query, paginate_options,
+      {:category => @category, :tag => @tag, :filter => @order, :template_id => params[:template_id],
+       :facets => params[:facets], :periods => params[:periods]})
   end
 
   private

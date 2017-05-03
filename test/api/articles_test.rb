@@ -182,31 +182,6 @@ class ArticlesTest < ActiveSupport::TestCase
     assert_not_includes json.map {|a| a['id']}, child.id
   end
 
-<<<<<<< HEAD
-=======
-  should 'perform a vote in a article identified by id' do
-    article = fast_create(Article, :profile_id => @person.id, :name => "Some thing")
-    @params[:value] = 1
-
-    post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
-    json = JSON.parse(last_response.body)
-
-    assert_not_equal 401, last_response.status
-    assert_equal true, json['vote']
-  end
-
-  expose_attributes = %w(id body abstract created_at title author profile categories image votes_for votes_against setting position hits start_date end_date tag_list parent children children_count)
-
-  expose_attributes.each do |attr|
-    should "expose article #{attr} attribute by default" do
-      article = fast_create(Article, :profile_id => user.person.id, :name => "Some thing")
-      get "/api/v1/articles/?#{params.to_query}"
-      json = JSON.parse(last_response.body)
-     assert json.last.has_key?(attr)
-    end
-  end
-
->>>>>>> master
   should 'not perform a vote twice in same article' do
     article = fast_create(Article, :profile_id => @person.id, :name => "Some thing")
     @params[:value] = 1
@@ -234,7 +209,7 @@ class ArticlesTest < ActiveSupport::TestCase
     post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
     json = JSON.parse(last_response.body)
     ## The api should not allow to save this vote
-    assert_equal 400, last_response.status
+    assert_equal Api::Status::UNPROCESSABLE_ENTITY, last_response.status
   end
 
   should 'perform a vote in a article identified by id' do
@@ -243,7 +218,6 @@ class ArticlesTest < ActiveSupport::TestCase
 
     post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
     json = JSON.parse(last_response.body)
-
     assert_not_equal 401, last_response.status
     assert_equal true, json['vote']
   end
@@ -252,10 +226,9 @@ class ArticlesTest < ActiveSupport::TestCase
     article = fast_create(Article, :profile_id => @person.id, :name => "Some thing", :archived => true)
     @params[:value] = 1
     post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
-    assert_equal 400, last_response.status
+    assert_equal Api::Status::UNPROCESSABLE_ENTITY, last_response.status
   end
 
-<<<<<<< HEAD
   expose_attributes = %w(id body abstract created_at title author profile categories image votes_for votes_against setting position hits start_date end_date tag_list parent children children_count)
 
   expose_attributes.each do |attr|
@@ -263,16 +236,16 @@ class ArticlesTest < ActiveSupport::TestCase
       article = fast_create(Article, :profile_id => user.person.id, :name => "Some thing")
       get "/api/v1/articles/?#{params.to_query}"
       json = JSON.parse(last_response.body)
-     assert json["articles"].last.has_key?(attr)
+      assert json.last.has_key?(attr)
     end
-=======
+  end
+
   should 'not update hit attribute of a specific child if a article is archived' do
     folder = fast_create(Folder, :profile_id => user.person.id, :archived => true)
     article = fast_create(Article, :parent_id => folder.id, :profile_id => user.person.id)
     get "/api/v1/articles/#{folder.id}/children/#{article.id}?#{params.to_query}"
     json = JSON.parse(last_response.body)
     assert_equal 0, json['hits']
->>>>>>> master
   end
 
   should 'find archived articles' do
@@ -721,14 +694,6 @@ class ArticlesTest < ActiveSupport::TestCase
     assert_equal 1, json['hits']
   end
 
-  should 'not update hit attribute of a specific child if a article is archived' do
-    folder = fast_create(Folder, :profile_id => user.person.id, :archived => true)
-    article = fast_create(Article, :parent_id => folder.id, :profile_id => user.person.id)
-    get "/api/v1/articles/#{folder.id}/children/#{article.id}?#{params.to_query}"
-    json = JSON.parse(last_response.body)
-    assert_equal 0, json['article']['hits']
-  end
-
   should 'list all events of a community in a given category' do
     co = Community.create(identifier: 'my-community', name: 'name-my-community')
     c1 = Category.create(environment: Environment.default, name: 'my-category')
@@ -859,7 +824,7 @@ class ArticlesTest < ActiveSupport::TestCase
     params[:until_start_date] = Time.now + 1.day
     get "/api/v1/articles/?#{params.to_query}"
     json = JSON.parse(last_response.body)
-    assert_equal json["articles"].map { |a| a["id"] }, [article1.id]
+    assert_equal json.map { |a| a["id"] }, [article1.id]
   end
 
   should 'list events with period for end date' do
@@ -869,7 +834,7 @@ class ArticlesTest < ActiveSupport::TestCase
     params[:from_end_date] = Time.now + 1.day
     get "/api/v1/articles/?#{params.to_query}"
     json = JSON.parse(last_response.body)
-    assert_equal json["articles"].map { |a| a["id"] }, [article2.id]
+    assert_equal json.map { |a| a["id"] }, [article2.id]
   end
 
   should 'list article permissions when get an article' do
@@ -918,4 +883,16 @@ class ArticlesTest < ActiveSupport::TestCase
     json = JSON.parse(last_response.body)
     assert_equivalent [article1.id, article2.id], json.map { |a| a["id"] }
   end
+
+  should "match error messages" do
+    profile = fast_create(Community, :environment_id => environment.id)
+    give_permission(user.person, 'post_content', profile)
+    params[:article] = {:name => ""}
+    post "/api/v1/communities/#{profile.id}/articles?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal ({"name" => [{"error"=>"blank"}]}), json["errors_details"]
+    assert_equal ({"name"=>["can't be blank"]}), json["errors_messages"]
+    assert_equal (["Title can't be blank"]), json["full_messages"]
+  end
+
 end
