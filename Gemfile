@@ -18,7 +18,7 @@ gem 'acts-as-taggable-on',      '~> 3.5'
 gem 'rails_autolink',           '~> 1.1.5'
 gem 'ruby-feedparser',          '~> 0.7'
 gem 'daemons',                  '~> 1.1'
-gem 'nokogiri',                 '~> 1.6.0'
+gem 'nokogiri',                 (if RUBY_VERSION >= '2.4.0' then '~> 1.7.0' else '~> 1.6.0' end)
 gem 'will_paginate',            '~> 3.0.7'
 gem 'pothoven-attachment_fu',   '~> 3.2.16'
 gem 'delayed_job'
@@ -69,9 +69,10 @@ group :development, :test do
   gem 'spring'
 end
 
+gem 'rspec',                  '~> 3.3'
+gem 'rspec-rails',            '~> 3.2'
+
 group :test do
-  gem 'rspec',                  '~> 3.3', require: false
-  gem 'rspec-rails',            '~> 3.2', require: false
   gem 'mocha',                  '~> 1.1.0', :require => false
   gem 'test-unit' if RUBY_VERSION >= '2.2.0'
   gem 'minitest'
