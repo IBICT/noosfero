@@ -1,6 +1,6 @@
 update = false
 
-unless system 'dpkg -s ruby-pg-search', :out => File::NULL
+unless !system('apt-get', out: File::NULL) && system('dpkg -s ruby-pg-search', :out => File::NULL)
   system 'sudo apt-get update', :out => File::NULL
   update = true
   unless system 'sudo apt-get install -y ruby-pg-search', :out => File::NULL
