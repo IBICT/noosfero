@@ -15,6 +15,9 @@ class Task < ApplicationRecord
   acts_as_having_settings field: :data
   acts_as_ordered_taggable
 
+  store_accessor :metadata
+  include MetadataScopes
+
   module Status
     # the status of tasks just created
     ACTIVE = 1
