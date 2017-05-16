@@ -104,6 +104,9 @@ module Api
         Entities.permissions_for_entity(block, options[:current_person], :allow_edit?)
       end
       expose :images, :using => Image
+      expose :definition do |block, options|
+        BlockDefinition.represent(block.class)
+      end
     end
 
     class Box < Entity
@@ -145,6 +148,7 @@ module Api
         Entities.permissions_for_entity(profile, options[:current_person],
         :allow_post_content?, :allow_edit?, :allow_destroy?)
       end
+      expose :theme
     end
 
     class UserBasic < Entity
@@ -313,6 +317,7 @@ module Api
       expose :permissions, if: lambda { |environment, options| options[:current_person].present? } do |environment, options|
         environment.permissions_for(options[:current_person])
       end
+      expose :theme
     end
 
     class Tag < Entity
