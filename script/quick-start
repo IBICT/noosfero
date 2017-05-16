@@ -113,13 +113,16 @@ else
     USER=$(stat -c %U $0)
   fi
   sed -ri "s/username: noosfero/username: $USER/" config/database.yml
+
+  # Create database and users
   sudo su - postgres -c "createuser $USER --no-superuser --createdb --no-createrole" || true
   sudo su - postgres -c "createdb noosfero_development -O $USER" || true
   sudo su - postgres -c "createdb noosfero_test -O $USER" || true
 
+  # Create table and sample data
   run rake db:schema:load
+  run rake db:schema:load RAILS_ENV=test
   run rake db:data:minimal
-  run rake db:test:prepare
   rails runner 'Environment.default.enable("skip_new_user_email_confirmation")'
 fi
 

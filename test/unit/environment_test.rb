@@ -1786,6 +1786,38 @@ class EnvironmentTest < ActiveSupport::TestCase
     assert_equal expected_hash, env.all_custom_enterprise_fields
   end
 
+  should 'allow plugins to add new reserved_identifiers' do
+    environment = Environment.default
+    class Plugin1 < Noosfero::Plugin
+      def reserved_identifiers
+        ['identifier1', 'identifier2']
+      end
+    end
+    Noosfero::Plugin::Manager.any_instance.stubs(:enabled_plugins).returns([Plugin1.new])
 
+    assert_includes environment.reserved_identifiers, 'identifier1'
+    assert_includes environment.reserved_identifiers, 'identifier2'
+  end
+
+  should 'list available core\'s blocks' do
+    environment = Environment.default
+    person = create_user('mytestuser').person
+    assert_includes environment.available_blocks(person), ArticleBlock
+  end
+
+  should 'list available blocks' do
+    environment = Environment.default
+    person = create_user('mytestuser').person
+    class CustomBlock1 < Block; end;
+    class TestBlockPlugin < Noosfero::Plugin
+      def self.extra_blocks
+        {
+          CustomBlock1 => {:type => Environment},
+        }
+      end
+    end
+    Noosfero::Plugin::Manager.any_instance.stubs(:enabled_plugins).returns([TestBlockPlugin.new])
+    assert_includes environment.available_blocks(person), CustomBlock1
+  end
 
 end

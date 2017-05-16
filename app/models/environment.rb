@@ -1073,9 +1073,27 @@ class Environment < ApplicationRecord
   end
 
   def available_blocks(person)
-    [ ArticleBlock, LoginBlock, RecentDocumentsBlock, EnterprisesBlock,
+    core_blocks = [ ArticleBlock, LoginBlock, RecentDocumentsBlock, EnterprisesBlock,
       CommunitiesBlock, LinkListBlock, FeedReaderBlock, SlideshowBlock,
       HighlightsBlock, CategoriesBlock, RawHTMLBlock, TagsCloudBlock ]
+    core_blocks + plugins.dispatch(:extra_blocks, type: self.class)
+  end
+
+  include Noosfero::Plugin::HotSpot
+  def environment
+    self
+  end
+
+  def reserved_identifiers
+    plugins.dispatch(:reserved_identifiers).inject([]) do |result, identifier|
+      result << identifier.to_s
+    end
+  end
+
+  def is_identifier_available?(identifier, profile_id = nil)
+    profiles = environment.profiles.where(:identifier => identifier)
+    profiles = profiles.where(['id != ?', profile_id]) if profile_id.present?
+    !reserved_identifiers.include?(identifier) && !profiles.exists?
   end
 
   private
