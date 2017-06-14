@@ -23,7 +23,7 @@ module Api
           detail 'Get all articles filtered by fields in query params'
           params Entities::Article.documentation
           success Entities::Article
-          failure [[Api::Status::FORBIDDEN, 'Forbidden']]
+          failure [[Api::Status::Http::FORBIDDEN, 'Forbidden']]
           named 'ArticlesList'
           headers [
             'Per-Page' => {
@@ -45,7 +45,7 @@ module Api
           detail 'Get only one article by id. If not found the "forbidden" http error is showed'
           params Entities::Article.documentation
           success Entities::Article
-          failure [[Api::Status::FORBIDDEN, 'Forbidden']]
+          failure [[Api::Status::Http::FORBIDDEN, 'Forbidden']]
           named 'ArticleById'
         end
         get ':id', requirements: {id: /[0-9]+/} do
@@ -70,14 +70,14 @@ module Api
             article.destroy
             present({success: true})
           rescue Exception => exception
-            render_api_error!(_('The article couldn\'t be removed due to some problem. Please contact the administrator.'), Api::Status::BAD_REQUEST)
+            render_api_error!(_('The article couldn\'t be removed due to some problem. Please contact the administrator.'), Api::Status::Http::BAD_REQUEST)
           end
         end
 
         desc 'Report a abuse and/or violent content in a article by id' do
           detail 'Submit a abuse (in general, a content violation) report about a specific article'
           params Entities::Article.documentation
-          failure [[Api::Status::BAD_REQUEST, 'Bad Request']]
+          failure [[Api::Status::Http::BAD_REQUEST, 'Bad Request']]
           named 'ArticleReportAbuse'
         end
         post ':id/report_abuse' do
@@ -103,14 +103,14 @@ module Api
             }
           rescue Exception => exception
             #logger.error(exception.to_s)
-            render_api_error!(_('Your report couldn\'t be saved due to some problem. Please contact the administrator.'), Api::Status::BAD_REQUEST)
+            render_api_error!(_('Your report couldn\'t be saved due to some problem. Please contact the administrator.'), Api::Status::Http::BAD_REQUEST)
           end
 
         end
 
         desc "Returns the articles I voted" do
           detail 'Get the Articles I make a vote'
-          failure [[Api::Status::FORBIDDEN, 'Forbidden']]
+          failure [[Api::Status::Http::FORBIDDEN, 'Forbidden']]
           named 'ArticleFollowers'
         end
          #FIXME refactor this method
@@ -121,7 +121,7 @@ module Api
         desc 'Perform a vote on a article by id' do
           detail 'Vote on a specific article with values: 1 (if you like) or -1 (if not)'
           params Entities::UserLogin.documentation
-          failure [[Api::Status::UNAUTHORIZED,'Unauthorized']]
+          failure [[Api::Status::Http::UNAUTHORIZED,'Unauthorized']]
           named 'ArticleVote'
         end
         post ':id/vote' do
@@ -129,7 +129,7 @@ module Api
           authenticate_allow_captcha!
           value = (params[:value] || 1).to_i
           # FIXME verify allowed values
-          render_api_error!('Vote value not allowed', Api::Status::BAD_REQUEST) unless [-1, 1].include?(value)
+          render_api_error!('Vote value not allowed', Api::Status::Http::BAD_REQUEST) unless [-1, 1].include?(value)
           article = find_article(environment.articles, {:id => params[:id]})
           ## If login with captcha
           if @current_tmp_user
@@ -155,7 +155,7 @@ module Api
         desc "Add a follower for the article" do
           detail 'Add the current user identified by private token, like a follower of a article'
           params Entities::UserLogin.documentation
-          failure [[Api::Status::UNAUTHORIZED, 'Unauthorized']]
+          failure [[Api::Status::Http::UNAUTHORIZED, 'Unauthorized']]
           named 'ArticleFollow'
         end
         post ':id/follow' do
@@ -175,7 +175,7 @@ module Api
         desc 'Return the children of a article identified by id' do
           detail 'Get all children articles of a specific article'
           params Entities::Article.documentation
-          failure [[Api::Status::FORBIDDEN, 'Forbidden']]
+          failure [[Api::Status::Http::FORBIDDEN, 'Forbidden']]
           named 'ArticleChildren'
         end
 
@@ -200,7 +200,7 @@ module Api
           detail 'Get a child of a specific article'
           params Entities::Article.documentation
           success Entities::Article
-          failure [[Api::Status::FORBIDDEN, 'Forbidden']]
+          failure [[Api::Status::Http::FORBIDDEN, 'Forbidden']]
           named 'ArticleChild'
         end
         get ':id/children/:child_id' do
@@ -216,7 +216,7 @@ module Api
           detail 'Suggest a article to another profile (person, community...)'
           params Entities::Article.documentation
           success Entities::Task
-          failure [[Api::Status::UNAUTHORIZED,'Unauthorized']]
+          failure [[Api::Status::Http::UNAUTHORIZED,'Unauthorized']]
           named 'ArticleSuggest'
         end
         post ':id/children/suggest' do
@@ -241,7 +241,7 @@ module Api
           detail 'Create a new article and associate to a parent'
           params Entities::Article.documentation
           success Entities::Article
-          failure [[Api::Status::UNAUTHORIZED,'Unauthorized']]
+          failure [[Api::Status::Http::UNAUTHORIZED,'Unauthorized']]
           named 'ArticleAddChild'
         end
         post ':id/children' do
@@ -270,7 +270,7 @@ module Api
                 detail 'Get a list of articles of a profile'
                 params Entities::Article.documentation
                 success Entities::Article
-                failure [[Api::Status::FORBIDDEN, 'Forbidden']]
+                failure [[Api::Status::Http::FORBIDDEN, 'Forbidden']]
                 named 'ArticlesOfProfile'
               end
               get do
@@ -295,7 +295,7 @@ module Api
                 detail 'Get only one article of a profile'
                 params Entities::Article.documentation
                 success Entities::Article
-                failure [[Api::Status::FORBIDDEN, 'Forbidden']]
+                failure [[Api::Status::Http::FORBIDDEN, 'Forbidden']]
                 named 'ArticleOfProfile'
               end
               get '/*id' do
@@ -309,7 +309,7 @@ module Api
                 detail 'Create a new article and associate with a profile'
                 params Entities::Article.documentation
                 success Entities::Article
-                failure [[Api::Status::FORBIDDEN, 'Forbidden']]
+                failure [[Api::Status::Http::FORBIDDEN, 'Forbidden']]
                 named 'ArticleCreateToProfile'
               end
               post do

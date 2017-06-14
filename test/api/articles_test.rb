@@ -209,7 +209,7 @@ class ArticlesTest < ActiveSupport::TestCase
     post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
     json = JSON.parse(last_response.body)
     ## The api should not allow to save this vote
-    assert_equal Api::Status::UNPROCESSABLE_ENTITY, last_response.status
+    assert_equal Api::Status::Http::UNPROCESSABLE_ENTITY, last_response.status
   end
 
   should 'perform a vote in a article identified by id' do
@@ -226,7 +226,7 @@ class ArticlesTest < ActiveSupport::TestCase
     article = fast_create(Article, :profile_id => @person.id, :name => "Some thing", :archived => true)
     @params[:value] = 1
     post "/api/v1/articles/#{article.id}/vote?#{params.to_query}"
-    assert_equal Api::Status::UNPROCESSABLE_ENTITY, last_response.status
+    assert_equal Api::Status::Http::UNPROCESSABLE_ENTITY, last_response.status
   end
 
   expose_attributes = %w(id body abstract created_at title author profile categories image votes_for votes_against setting position hits start_date end_date tag_list parent children children_count)
