@@ -1956,6 +1956,15 @@ class ProfileTest < ActiveSupport::TestCase
     assert_equal roles[2..3], Profile::Roles.organization_member_roles(env.id)
   end
 
+  should 'get organization member and custom roles' do
+    env = fast_create(Environment)
+    env.roles.delete_all
+    profile = fast_create(Organization)
+    roles = %w(profile_foo profile_bar).map{ |r| create(Role, :name => r, :key => r, :environment_id => env.id, :permissions => ["some"]) }
+    roles << create(Role, name: 'test', key: 'something_else', environment_id: env.id, profile_id: profile.id)
+    assert_equal roles[0..2], Profile::Roles.organization_member_and_custom_roles(env.id, profile.id)
+  end
+
   should 'get organization roles' do
     env = fast_create(Environment)
     env.roles.delete_all
@@ -2408,5 +2417,34 @@ class ProfileTest < ActiveSupport::TestCase
     person = create_user('mytestuser').person
     profile.environment.add_admin(person)
     assert_includes profile.available_blocks(person), RawHTMLBlock
+  end
+
+  should 'follow the profile when adding a member' do
+    profile = fast_create(Community)
+    person = create_user.person
+
+    assert_difference 'profile.followers.count' do
+      profile.add_member(person)
+    end
+  end
+
+  should 'follow the profile when adding an admin' do
+    profile = fast_create(Community)
+    person = create_user.person
+
+    assert_difference 'profile.followers.count' do
+      profile.add_admin(person)
+    end
+  end
+
+  should 'unfollow the profile once there are no role assignments left' do
+    profile = fast_create(Community)
+    person = create_user.person
+    profile.add_member(person)
+    profile.add_admin(person)
+
+    Person.any_instance.expects(:unfollow).once
+    profile.remove_admin(person)
+    profile.remove_member(person)
   end
 end

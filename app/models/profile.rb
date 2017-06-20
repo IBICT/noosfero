@@ -86,6 +86,10 @@ class Profile < ApplicationRecord
     def self.organization_roles(env_id, profile_id)
       all_roles(env_id).where("profile_id = ?  or key like 'profile_%'", profile_id)
     end
+    def self.organization_member_and_custom_roles(env_id, profile_id) 
+      self.organization_member_roles(env_id) | self.organization_custom_roles(env_id, profile_id)
+    end
+
     def self.all_roles(env_id)
       Role.where(environment_id: env_id)
     end
@@ -863,7 +867,6 @@ private :generate_url, :url_options
       else
         self.affiliate(person, Profile::Roles.admin(environment.id), attributes) if members.count == 0
         self.affiliate(person, Profile::Roles.member(environment.id), attributes)
-        person.follow(self, Circle.find_or_create_by(:person => person, :name =>_('memberships'), :profile_type => 'Community'))
       end
       person.tasks.pending.of("InviteMember").select { |t| t.data[:community_id] == self.id }.each { |invite| invite.cancel }
       remove_from_suggestion_list person
@@ -879,8 +882,6 @@ private :generate_url, :url_options
   # adds a person as administrator os this profile
   def add_admin(person)
     self.affiliate(person, Profile::Roles.admin(environment.id))
-    circle = Circle.find_or_create_by(name: _('memberships'), person: person, profile_type: self.class.name)
-    person.follow(self, circle)
   end
 
   def remove_admin(person)
