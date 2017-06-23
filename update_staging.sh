@@ -2,6 +2,7 @@
 
 git checkout master
 git pull
+rm Gemfile.lock
 git stash
 git checkout staging
 git pull
