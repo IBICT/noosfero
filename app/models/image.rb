@@ -1,5 +1,7 @@
 class Image < ApplicationRecord
 
+  include UploadSanitizer
+
   attr_accessible :uploaded_data, :label, :remove_image
   attr_accessor :remove_image
 
@@ -8,8 +10,6 @@ class Image < ApplicationRecord
   def self.max_size
     Image.attachment_options[:max_size]
   end
-
-  sanitize_filename
 
   has_attachment :content_type => :image,
                  :storage => :file_system,
@@ -22,7 +22,6 @@ class Image < ApplicationRecord
                                   :icon     => '20x20!' },
                  :max_size => 5.megabytes, # remember to update validate message below
                  processor: 'Rmagick'
-
   validates_attachment :size => N_("{fn} of uploaded file was larger than the maximum size of 5.0 MB").fix_i18n
 
   extend DelayedAttachmentFu::ClassMethods
@@ -32,6 +31,10 @@ class Image < ApplicationRecord
 
   def current_data
     File.file?(full_filename) ? File.read(full_filename) : nil
+  end
+
+  def data(size = nil)
+    File.file?(full_filename(size)) ? File.read(full_filename(size)) : nil
   end
 
 end
