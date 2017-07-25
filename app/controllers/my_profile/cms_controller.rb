@@ -5,6 +5,7 @@ class CmsController < MyProfileController
   include ArticleHelper
   include CategoriesHelper
   include SearchTags
+  include Captcha
 
   def self.protect_if(*args)
     before_filter(*args) do |c|
@@ -12,7 +13,8 @@ class CmsController < MyProfileController
       if yield(c, user, profile)
         true
       else
-        render_access_denied(c)
+        access_denied = _("You do not have access to ")
+        render_access_denied("#{access_denied}#{c.request.path_info}")
         false
       end
     end
@@ -349,7 +351,7 @@ class CmsController < MyProfileController
       @task.user_agent = request.user_agent
       @task.referrer = request.referrer
       @task.requestor = current_person if logged_in?
-      if (logged_in? || verify_recaptcha(:model => @task, :message => _('Please type the words correctly'))) && @task.save
+      if verify_captcha(:suggest_article, @task, user, environment, profile) && @task.save
         session[:notice] = _('Thanks for your suggestion. The community administrators were notified.')
         redirect_to @back_to
       end

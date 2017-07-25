@@ -1039,6 +1039,18 @@ class ProfileTest < ActiveSupport::TestCase
     assert_equal 'leftbar', p.layout_template
   end
 
+  should 'copy picture template when applying template' do
+    template = fast_create(Profile, :is_template => true)
+    template.image = Image.new
+    template.save!
+
+    p = create(Profile)
+
+    p.apply_template(template)
+
+    assert_equal template.image, p.image
+  end
+
   should 'copy blocks when applying template' do
     template = fast_create(Profile, :is_template => true)
     template.boxes.destroy_all
@@ -1096,6 +1108,38 @@ class ProfileTest < ActiveSupport::TestCase
     assert_equal '{name}', p.custom_header
     assert_equal 'test prof', p.custom_header_expanded
   end
+
+  should 'copy article tree from another community' do
+    community1 = fast_create(Community, :identifier => 'community1')
+    community2 = fast_create(Community, :identifier => 'community2')
+    folder = fast_create(Folder, :profile_id => community1.id, :name => 'test')
+    article2 = fast_create(Article, :profile_id => community1.id, :name => 'test2', :parent_id => folder.id)
+    article3 = fast_create(Article, :profile_id => community1.id, :name => 'test3', :parent_id => folder.id)
+
+    assert_equal 3, community1.articles.count
+    assert_equal 0, community2.articles.count
+
+    community2.copy_article_tree(folder)
+
+    assert_equal 3, community2.articles.count
+    assert_equal 2, community2.articles.where(name: "test").first.children.count
+  end
+
+  should 'change article\'s name if there is already a article with same name in community' do
+    community1 = fast_create(Community, :identifier => 'community1')
+    community2 = fast_create(Community, :identifier => 'community2')
+    folder = fast_create(Folder, :profile_id => community1.id, :name => 'test')
+    folder = fast_create(Folder, :profile_id => community2.id, :name => 'test')
+
+    assert_equal 1, community1.articles.count
+    assert_equal 1, community2.articles.count
+
+    community2.copy_article_tree(folder)
+
+    assert_equal 2, community2.articles.count
+    assert_not_nil community2.articles.where(name: "test 2").first
+  end
+
 
   should 'copy footer when applying template' do
     template = create(Profile, :address => 'Template address', :custom_footer => '{address}', :is_template => true)

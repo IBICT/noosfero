@@ -298,7 +298,7 @@ class Profile < ApplicationRecord
     where('circles.id = ?', circle.id)
   }
 
-  settings_items :wall_access, :type => :integer, :default => AccessLevels::LEVELS[:users]
+  settings_items :wall_access, :type => :integer, :default => AccessLevels.levels[:users]
   settings_items :allow_followers, :type => :boolean, :default => true
   alias_method :allow_followers?, :allow_followers
 
@@ -413,7 +413,7 @@ class Profile < ApplicationRecord
   end
 
   def wall_access_levels
-    AccessLevels.options(1)
+    AccessLevels.range_options(1, 3)
   end
 
   def interests
@@ -594,7 +594,7 @@ class Profile < ApplicationRecord
     self.custom_footer = template[:custom_footer]
     self.custom_header = template[:custom_header]
     self.public_profile = template.public_profile
-
+    self.image = template.image
     # flush
     self.save(:validate => false)
   end
@@ -869,6 +869,7 @@ private :generate_url, :url_options
       else
         self.affiliate(person, Profile::Roles.admin(environment.id), attributes) if members.count == 0
         self.affiliate(person, Profile::Roles.member(environment.id), attributes)
+        plugins.dispatch(:member_added, self, person)
       end
       person.tasks.pending.of("InviteMember").select { |t| t.data[:community_id] == self.id }.each { |invite| invite.cancel }
       remove_from_suggestion_list person
@@ -879,6 +880,7 @@ private :generate_url, :url_options
 
   def remove_member(person)
     self.disaffiliate(person, Profile::Roles.all_roles(environment.id))
+    plugins.dispatch(:member_removed, self, person)
   end
 
   # adds a person as administrator os this profile
@@ -1124,7 +1126,6 @@ private :generate_url, :url_options
     image.public_filename(:icon) if image.present?
   end
 
-  #FIXME make this test
   def profile_custom_image(size = :icon)
     image_path = profile_custom_icon if size == :icon
     image_path ||= image.public_filename(size) if image.present?

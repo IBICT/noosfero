@@ -60,6 +60,7 @@ class Environment < ApplicationRecord
     'manage_environment_licenses' => N_('Manage environment licenses'),
     'manage_environment_trusted_sites' => N_('Manage environment trusted sites'),
     'manage_environment_kinds' => N_('Manage environment kinds'),
+    'manage_environment_captcha' => N_('Manage environment captcha'),
     'edit_appearance'      => N_('Edit appearance'),
     'edit_raw_html_block'      => N_('Edit Raw HTML block'),
     'manage_email_templates' => N_('Manage Email Templates'),
@@ -163,7 +164,6 @@ class Environment < ApplicationRecord
       'show_balloon_with_profile_links_when_clicked' => _('Show a balloon with profile links when a profile image is clicked'),
       'xmpp_chat' => _('XMPP/Jabber based chat'),
       'show_zoom_button_on_article_images' => _('Show a zoom link on all article images'),
-      'captcha_for_logged_users' => _('Ask captcha when a logged user comments too'),
       'skip_new_user_email_confirmation' => _('Skip e-mail confirmation for new users'),
       'send_welcome_email_to_new_users' => _('Send welcome e-mail to new users'),
       'allow_change_of_redirection_after_login' => _('Allow users to set the page to redirect after login'),
@@ -464,6 +464,30 @@ class Environment < ApplicationRecord
     end
   end
 
+  store_accessor :metadata
+  include MetadataScopes
+
+  CAPTCHA = {
+    create_comment: {label: _('Create a comment'), options: RestrictionLevels.range_options},
+    new_contact: {label: _('Make email contact'), options: RestrictionLevels.range_options},
+    report_abuse: {label: _('Report an abuse'), options: RestrictionLevels.range_options},
+    suggest_article: {label: _('Suggest a new article'), options: RestrictionLevels.range_options(0,1)},
+    forgot_password: {label: _('Recover forgotten password'), options: RestrictionLevels.range_options(0,1)},
+    signup: {label: _('Sign up'), options: RestrictionLevels.range_options(0,1)},
+  }
+
+  def default_captcha_requirement
+    2
+  end
+
+  def get_captcha_level(action)
+    (metadata['captcha'] && metadata['captcha'][action.to_s]) || default_captcha_requirement
+  end
+
+  def require_captcha?(action, user, profile = nil)
+    RestrictionLevels.is_restricted?(get_captcha_level(action), user, profile)
+  end
+
   # returns <tt>true</tt> if this Environment has terms of use to be
   # accepted by users before registration.
   def has_terms_of_use?
@@ -549,19 +573,11 @@ class Environment < ApplicationRecord
   end
 
   def required_person_fields
-    required_fields = []
-    active_person_fields.each do |field|
-      required_fields << field if custom_person_fields[field]['required'] == 'true'
-    end
-    required_fields
+    build_fields "active_person_fields", "custom_person_fields", 'required'
   end
 
   def signup_person_fields
-    signup_fields = []
-    active_person_fields.each do |field|
-      signup_fields << field if custom_person_fields[field]['signup'] == 'true'
-    end
-    signup_fields
+    build_fields "active_person_fields", "custom_person_fields", 'signup'
   end
 
   def invitation_mail_template(profile)
@@ -605,24 +621,24 @@ class Environment < ApplicationRecord
     false
   end
 
+  def build_fields active_fields, custom_fields, local
+    fields = []
+    send(active_fields).each do |field|
+      fields << field if send(custom_fields)[field][local] == 'true'
+    end
+    fields
+  end
+
   def active_enterprise_fields
      (custom_enterprise_fields.delete_if { |key, value| !custom_enterprise_field(key, 'active')}).keys || []
   end
 
   def required_enterprise_fields
-    required_fields = []
-    active_enterprise_fields.each do |field|
-      required_fields << field if custom_enterprise_fields[field]['required'] == 'true'
-    end
-    required_fields
+    build_fields "active_enterprise_fields", "custom_enterprise_fields", 'required'
   end
 
   def signup_enterprise_fields
-    signup_fields = []
-    active_enterprise_fields.each do |field|
-      signup_fields << field if custom_enterprise_fields[field]['signup'] == 'true'
-    end
-    signup_fields
+    build_fields "active_enterprise_fields", "custom_enterprise_fields", 'signup'
   end
 
   def all_custom_community_fields
@@ -663,19 +679,11 @@ class Environment < ApplicationRecord
   end
 
   def required_community_fields
-    required_fields = []
-    active_community_fields.each do |field|
-      required_fields << field if custom_community_fields[field]['required'] == 'true'
-    end
-    required_fields
+    build_fields "active_community_fields", "custom_community_fields", 'required'
   end
 
   def signup_community_fields
-    signup_fields = []
-    active_community_fields.each do |field|
-      signup_fields << field if custom_community_fields[field]['signup'] == 'true'
-    end
-    signup_fields
+    build_fields "active_community_fields", "custom_community_fields", 'signup'
   end
 
   serialize :signup_welcome_text, Hash
@@ -1094,6 +1102,26 @@ class Environment < ApplicationRecord
     profiles = environment.profiles.where(:identifier => identifier)
     profiles = profiles.where(['id != ?', profile_id]) if profile_id.present?
     !reserved_identifiers.include?(identifier) && !profiles.exists?
+  end
+
+  BLACKLIST_DURATION = 3 # hours
+
+  def on_signup_blacklist?(ip_address)
+    metadata['signup_blacklist'].present? && metadata['signup_blacklist'].include?(ip_address)
+  end
+
+  def add_to_signup_blacklist(ip_address)
+    metadata['signup_blacklist'] = [] if metadata['signup_blacklist'].nil?
+    unless metadata['signup_blacklist'].include?(ip_address)
+    self.metadata['signup_blacklist'] << ip_address
+    self.save!
+    Delayed::Job.enqueue(RemoveIpFromBlacklistJob.new(environment.id, ip_address), {:run_at => BLACKLIST_DURATION.hours.from_now})
+    end
+  end
+
+  def remove_from_signup_blacklist(ip_address)
+    self.metadata['signup_blacklist'].delete(ip_address)
+    self.save!
   end
 
   private

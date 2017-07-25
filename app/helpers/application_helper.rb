@@ -295,7 +295,7 @@ module ApplicationHelper
 
   def theme_favicon
     return '/designs/themes/' + current_theme + '/favicon.ico' if profile.nil? || profile.theme.nil?
-    if File.exists?(Rails.root.join('public', theme_path, 'favicon.ico'))
+    if File.exists?(File.join(Rails.root, 'public', theme_path, 'favicon.ico'))
       '/designs/themes/' + profile.theme + '/favicon.ico'
     else
       favicon = profile.articles.find_by path: 'favicon.ico'
@@ -895,24 +895,19 @@ module ApplicationHelper
   def usermenu_logged_in
     pending_tasks_count = ''
     count = user ? Task.to(user).pending.count : -1
+
     if count > 0
-      pending_tasks_count = link_to("<i class=\"icon-menu-tasks\"></i><span class=\"task-count\">#{count}</span>".html_safe, user.tasks_url, :id => 'pending-tasks-count', :title => _("Manage your pending tasks"))
+      pending_tasks_count = link_to(count.to_s, 
+      user.tasks_url,
+      :id => 'pending-tasks-count',
+      :title => _("Manage your pending tasks"))
     end
 
-    user_identifier = "<i style='background-image:url(#{user.profile_custom_icon(gravatar_default)})'></i><strong>#{user.identifier}</strong>"
+    join_result = safe_join(user_menu_items(pending_tasks_count), "")
+    join_result
+  end
 
-    welcome_link = link_to(user_identifier.html_safe, user.public_profile_url, :id => "homepage-link", :title => _('Go to your homepage'))
-    welcome_span = _("<span class='welcome'>Welcome,</span> %s") % welcome_link.html_safe
-
-    ctrl_panel_icon = '<i class="icon-menu-ctrl-panel"></i>'
-    ctrl_panel_section = '<strong>' + ctrl_panel_icon + _('Control panel') + '</strong>'
-    ctrl_panel_link = link_to(ctrl_panel_section.html_safe, user.admin_url, :class => 'ctrl-panel', :title => _("Configure your personal account and content"))
-
-    logout_icon = '<i class="icon-menu-logout"></i><strong>' + _('Logout') + '</strong>'
-    logout_link = link_to(logout_icon.html_safe, { :controller => 'account', :action => 'logout'} , :id => "logout", :title => _("Leave the system"))
-
-    plugins_items = @plugins.dispatch(:user_menu_items, user).collect { |content| instance_eval(&content) }
-
+  def user_menu_items (pending_tasks_count)
     items = [
       welcome_span.html_safe,
       *plugins_items,
@@ -924,9 +919,39 @@ module ApplicationHelper
       pending_tasks_count.html_safe,
       logout_link.html_safe
     ]
-    join_result = safe_join(
-      items, "")
-    join_result
+    items 
+  end
+
+  def logout_link
+    logout_icon = '<i class="icon-menu-logout"></i><strong>' + _('Logout') + '</strong>'
+    logout_link = link_to(logout_icon.html_safe,
+      {:controller => 'account',:action => 'logout'},
+      :id => "logout", :title => _("Leave the system"))
+    logout_link   
+  end
+
+  def plugins_items
+    plugins_items = @plugins.dispatch(:user_menu_items, user).collect { |content| instance_eval(&content) }
+    plugins_items
+  end
+
+  def welcome_span
+    user_identifier = "<i style='background-image:url(#{user.profile_custom_icon(gravatar_default)})'></i><strong>#{user.identifier}</strong>"
+    welcome_link = link_to(user_identifier.html_safe,
+        user.public_profile_url,
+        :id => "homepage-link",
+        :title => _('Go to your homepage'))
+    welcome_span = _("<span class='welcome'>Welcome,</span> %s") % welcome_link.html_safe
+    welcome_span
+  end
+
+  def ctrl_panel_link 
+    ctrl_panel_icon = '<i class="icon-menu-ctrl-panel"></i>'
+    ctrl_panel_section = '<strong>' + ctrl_panel_icon + _('Control panel') + '</strong>'
+    ctrl_panel_link = link_to(ctrl_panel_section.html_safe, user.admin_url,
+      :class => 'ctrl-panel',
+      :title => _("Configure your personal account and content"))
+    ctrl_panel_link
   end
 
   def usermenu_notlogged_in
@@ -1262,4 +1287,9 @@ module ApplicationHelper
     editor
   end
 
+  def captcha_tags(action, user, environment, profile = nil)
+    if environment.require_captcha?(action, user, profile)
+      content_tag('p', recaptcha_tags(:ajax => true))
+    end
+  end
 end

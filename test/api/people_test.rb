@@ -219,6 +219,30 @@ class PeopleTest < ActiveSupport::TestCase
     assert_not_includes friends, invisible_friend.id
   end
 
+  should 'list person friends ordered' do
+    login_api
+    p2 = fast_create(Person, :name => 'Person 2')
+    p4 = fast_create(Person, :name => 'Person 1')
+    p1 = fast_create(Person, :name => 'Person 4')
+    p3 = fast_create(Person, :name => 'Person 3')
+    person.add_friend(p1)
+    person.add_friend(p2)
+    person.add_friend(p3)
+    person.add_friend(p4)
+    params[:order] = 'name ASC'
+    get "/api/v1/people/#{person.id}/friends?#{params.to_query}"
+    expected_response = [p4.id, p2.id, p3.id, p1.id]
+    assert_equal json_response_ids, expected_response
+  end
+
+  should 'list person friends ordered for person without friends' do
+    login_api
+    params[:order] = 'name ASC'
+    get "/api/v1/people/#{person.id}/friends?#{params.to_query}"
+    expected_response = []
+    assert_equal json_response_ids, expected_response
+  end
+
   should 'create a person' do
     login_api
     login = 'some'
@@ -693,6 +717,76 @@ class PeopleTest < ActiveSupport::TestCase
     get "/api/v1/people/#{person.id}/friends?#{params.to_query}"
     json = JSON.parse(last_response.body)
     assert_equal [friend1.id], json_response_ids
+  end
+
+  should "get friendship state equal to #{Api::Status::Friendship::NOT_FRIEND} when user is not a friend by identifier" do
+    login_api
+    person = fast_create(Person)
+    friend = fast_create(Person)
+    params[:identifier] = person.identifier
+    get "/api/v1/people/#{friend.id}/friendship?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal Api::Status::Friendship::NOT_FRIEND, json['code']
+  end
+
+  should "get friendship state equal to #{Api::Status::Friendship::NOT_FRIEND} when user is not a friend by id" do
+    login_api
+    person = fast_create(Person)
+    friend = fast_create(Person)
+    params[:identifier] = person.identifier
+    get "/api/v1/people/#{person.id}/friendship?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal Api::Status::Friendship::NOT_FRIEND, json['code']
+  end
+
+  should "get friendship state equal to #{Api::Status::Friendship::WAITING_FOR_APPROVAL} when user is waiting approval by friend_id" do
+    login_api
+    person = fast_create(Person)
+    friend = fast_create(Person)
+    deliver = mock()
+    TaskMailer.stubs(:target_notification).returns(deliver)
+    deliver.stubs(:deliver)
+    AddFriend.create!(:person => person, :friend => friend)
+    params[:friend_id] = friend.id
+    get "/api/v1/people/#{person.id}/friendship?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal Api::Status::Friendship::WAITING_FOR_APPROVAL, json['code']
+  end
+
+  should "get friendship state equal to #{Api::Status::Friendship::WAITING_FOR_APPROVAL} when user is waiting approval by identifier" do
+    login_api
+    person = fast_create(Person)
+    friend = fast_create(Person)
+    deliver = mock()
+    TaskMailer.stubs(:target_notification).returns(deliver)
+    deliver.stubs(:deliver)
+    AddFriend.create!(:person => person, :friend => friend)
+    params[:identifier] = friend.identifier
+    get "/api/v1/people/#{person.id}/friendship?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal Api::Status::Friendship::WAITING_FOR_APPROVAL, json['code']
+  end
+
+  should "get friendship state equal to #{Api::Status::Friendship::FRIEND} when user is a friend by friend_id" do
+    login_api
+    person = fast_create(Person)
+    friend = fast_create(Person)
+    person.add_friend(friend)
+    params[:friend_id] = friend.id
+    get "/api/v1/people/#{person.id}/friendship?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal Api::Status::Friendship::FRIEND, json['code']
+  end
+
+  should "get friendship state equal to #{Api::Status::Friendship::FRIEND} when user is a friend by identifier" do
+    login_api
+    person = fast_create(Person)
+    friend = fast_create(Person)
+    person.add_friend(friend)
+    params[:identifier] = friend.identifier
+    get "/api/v1/people/#{person.id}/friendship?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal Api::Status::Friendship::FRIEND, json['code']
   end
 
   #####

@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170505164823) do
+ActiveRecord::Schema.define(version: 20170706154855) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -310,6 +310,10 @@ ActiveRecord::Schema.define(version: 20170505164823) do
   end
 
   add_index "comments", ["paragraph_uuid"], name: "index_comments_on_paragraph_uuid", using: :btree
+    t.jsonb    "metadata",    default: {}
+  end
+
+  add_index "comments", ["metadata"], name: "index_comments_on_metadata", using: :gin
   add_index "comments", ["source_id", "spam"], name: "index_comments_on_source_id_and_spam", using: :btree
 
   create_table "contact_lists", force: :cascade do |t|
@@ -413,7 +417,10 @@ ActiveRecord::Schema.define(version: 20170505164823) do
     t.string   "http_feed_proxy"
     t.string   "https_feed_proxy"
     t.boolean  "disable_feed_ssl",             default: false
+    t.jsonb    "metadata",                     default: {}
   end
+
+  add_index "environments", ["metadata"], name: "index_environments_on_metadata", using: :gin
 
   create_table "external_feeds", force: :cascade do |t|
     t.string   "feed_title"

@@ -1,10 +1,3 @@
-<% if @block_bot %>
-  <div class="atention" style="font-size: 150%;">
-    <strong><%=_('Are you a robot?')%></strong> <br />
-    <%=_('Please, prove that you are human by filling the captcha.')%>
-  </div>
-<% end %>
-
 <% @profile_data = @person %>
 
 <%= javascript_include_tag('sign_up_password_rate') %>
@@ -48,6 +41,9 @@
     <%= required f.password_field(:password, :id => 'user_pw') %>
     <%= content_tag(:small,_('Choose a password that you can remember easily. It must have at least 4 characters.'), :id => 'password-balloon') %>
     <div id='password-rate'>
+      <p><span class="invalid" id='result-blank'>
+        &nbsp;
+      </span></p>
       <p><span class="invalid hidden" id='result-short'>
         <%=_('Short') %>
       </span></p>
@@ -128,7 +124,7 @@
   <% end %>
 </div>
 
-<%= recaptcha_tags :ajax => true, :ssl => true, :display => {:theme => 'clean'} if @block_bot %>
+<%= captcha_tags(:signup, nil, environment) %>
 
 <p style="text-align: center">
   <%= submit_button('save', _('Create my account')) %>
