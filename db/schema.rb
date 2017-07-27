@@ -307,12 +307,10 @@ ActiveRecord::Schema.define(version: 20170706154855) do
     t.integer  "paragraph_id"
     t.string   "paragraph_uuid"
     t.integer  "group_id"
-  end
-
-  add_index "comments", ["paragraph_uuid"], name: "index_comments_on_paragraph_uuid", using: :btree
     t.jsonb    "metadata",    default: {}
   end
 
+  add_index "comments", ["paragraph_uuid"], name: "index_comments_on_paragraph_uuid", using: :btree
   add_index "comments", ["metadata"], name: "index_comments_on_metadata", using: :gin
   add_index "comments", ["source_id", "spam"], name: "index_comments_on_source_id_and_spam", using: :btree
 
