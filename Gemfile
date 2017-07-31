@@ -68,10 +68,6 @@ group :production do
   gem 'dalli', '~> 2.7.0'
 end
 
-group :development, :test do
-  gem 'spring'
-end
-
 gem 'rspec',                  '~> 3.3'
 gem 'rspec-rails',            '~> 3.2'
 
