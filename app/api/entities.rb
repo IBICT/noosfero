@@ -142,11 +142,13 @@ module Api
       expose :layout_template
       expose :permissions do |profile, options|
         Entities.permissions_for_entity(profile, options[:current_person],
-        :allow_post_content?, :allow_edit?, :allow_destroy?)
+        :allow_post_content?, :allow_edit?, :allow_destroy?, :allow_edit_design?)
       end
       expose :theme do |profile, options|
         profile.theme || profile.environment.theme
       end
+      expose :boxes, :using => Box, :if => lambda {|profile, options| Entities.expose_optional_field?(:boxes, options)}
+
     end
 
     class UserBasic < Entity
