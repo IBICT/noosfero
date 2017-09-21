@@ -2,19 +2,43 @@ class CustomFormsPlugin::Form < ApplicationRecord
 
   belongs_to :profile
 
-  has_many :fields, -> { order 'position' }, class_name: 'CustomFormsPlugin::Field', dependent: :destroy
+  has_many :fields, -> { order 'position' },
+    class_name: 'CustomFormsPlugin::Field', dependent: :destroy
   accepts_nested_attributes_for :fields, :allow_destroy => true
 
-  has_many :submissions, :class_name => 'CustomFormsPlugin::Submission', :dependent => :destroy
+  has_many :submissions,
+    :class_name => 'CustomFormsPlugin::Submission', :dependent => :destroy
 
   serialize :access
 
-  validates_presence_of :profile, :name
+  validates_presence_of :profile, :name, :identifier
   validates_uniqueness_of :slug, :scope => :profile_id
-  validate :period_range, :if => Proc.new { |f| f.begining.present? && f.ending.present? }
+  validates_uniqueness_of :identifier, :scope => :profile_id
+  validate :period_range,
+    :if => Proc.new { |f| f.begining.present? && f.ending.present? }
   validate :access_format
 
-  attr_accessible :name, :profile, :for_admission, :access, :begining, :ending, :description, :fields_attributes, :profile_id, :on_membership
+  # We are using a belongs_to relation, to avoid change the UploadedFile schema.
+  # With the belongs_to instead of the has_one, we keep the change only on the
+  # CustomFormsPlugin::Form schema.
+  belongs_to :article, :class_name => 'UploadedFile', dependent: :destroy
+
+  attr_accessible :name, :profile, :for_admission, :access, :begining,
+    :ending, :description, :fields_attributes, :profile_id,
+    :on_membership, :identifier, :access_result_options, :kind
+
+  KINDS = %w(survey poll)
+  # Dynamic Translations
+  _('Survey')
+  _('Surveys')
+  _('survey')
+  _('surveys')
+  _('Poll')
+  _('Polls')
+  _('poll')
+  _('polls')
+
+  validates :kind, inclusion: { in: KINDS, message: _("%{value} is not a valid kind.") }
 
   before_validation do |form|
     form.slug = form.name.to_slug if form.name.present?
@@ -29,18 +53,10 @@ class CustomFormsPlugin::Form < ApplicationRecord
   scope :from_profile, -> profile { where profile_id: profile.id }
   scope :on_memberships, -> { where on_membership: true, for_admission: false }
   scope :for_admissions, -> { where for_admission: true }
-=begin
-  scope :accessible_to lambda do |profile|
-    #TODO should verify is profile is associated with the form owner
-    profile_associated = ???
-    {:conditions => ["
-      access IS NULL OR
-      (access='logged' AND :profile_present) OR
-      (access='associated' AND :profile_associated) OR
-      :profile_id in access
-    ", {:profile_present => profile.present?, :profile_associated => ???, :profile_id => profile.id}]}
-  end
-=end
+  scope :with_public_results, -> { where access_result_options: "public" }
+  scope :with_private_results, -> { where access_result_options: "private" }
+  scope :with_public_results_after_ends, -> { where access_result_options: "public_after_ends" }
+  scope :by_kind, -> kind { where kind: kind.to_s }
 
   def expired?
     (begining.present? && Time.now < begining) || (ending.present? && Time.now > ending)
@@ -57,6 +73,14 @@ class CustomFormsPlugin::Form < ApplicationRecord
     return true if access == 'associated' && ((profile.organization? && profile.members.include?(target)) || (profile.person? && profile.friends.include?(target)))
     return true if access.kind_of?(Integer) && target.id == access
     return true if access.kind_of?(Array) && access.include?(target.id)
+  end
+
+  def image
+    self.article
+  end
+
+  def image=(uploaded_file)
+    self.article = uploaded_file
   end
 
   private

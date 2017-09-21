@@ -1046,6 +1046,7 @@ class Environment < ApplicationRecord
 
   validate :default_language_available
   validate :languages_available
+  validate :upload_quota_sizes
 
   def locales
     if languages.present?
@@ -1124,6 +1125,15 @@ class Environment < ApplicationRecord
     self.save!
   end
 
+  def quota_for(klass)
+    if metadata['quotas'].present?
+      quota = metadata['quotas'][klass.to_s]
+      quota.blank? ? nil : quota.to_f
+    else
+      klass.default_quota
+    end
+  end
+
   private
 
   def default_language_available
@@ -1139,6 +1149,16 @@ class Environment < ApplicationRecord
           errors.add(:languages, _('have unsupported languages.'))
           break
         end
+      end
+    end
+  end
+
+  def upload_quota_sizes
+    quotas = metadata['quotas'] || {}
+    quotas.each do |klass, quota|
+      float_quota = Float(quota) rescue nil
+      if quota.present? && float_quota.nil?
+        errors.add(:quota, _('Invalid value'))
       end
     end
   end

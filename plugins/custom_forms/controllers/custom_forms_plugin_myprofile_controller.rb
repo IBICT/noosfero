@@ -3,12 +3,19 @@ require 'csv'
 class CustomFormsPluginMyprofileController < MyProfileController
   protect 'post_content', :profile
 
+  before_filter :remove_empty_alternatives, :only => [:create, :update]
+
   def index
-    @forms = CustomFormsPlugin::Form.from_profile(profile)
+    @forms = {}
+    all_forms = CustomFormsPlugin::Form.from_profile(profile)
+    CustomFormsPlugin::Form::KINDS.each do |kind|
+      @forms[kind.to_sym] = all_forms.by_kind(kind)
+    end
   end
 
   def new
     @form = CustomFormsPlugin::Form.new
+    @kind = params[:kind]
 
     respond_to do |format|
       format.html
@@ -17,22 +24,26 @@ class CustomFormsPluginMyprofileController < MyProfileController
 
   def create
     params[:form][:profile_id] = profile.id
+    uploaded_data = params[:form].delete(:image)
     @form = CustomFormsPlugin::Form.new(params[:form])
-
     normalize_positions(@form)
 
+    form_with_image  = add_gallery_in_form(@form, profile, uploaded_data)
+
     respond_to do |format|
-      if @form.save
-        flash[:notice] = _("Custom form %s was successfully created.") % @form.name
+      if form_with_image
+        session[:notice] = _("%s was successfully created") % @form.name
         format.html { redirect_to(:action=>'index') }
       else
-        format.html { render :action => 'new' }
+        @kind = @form.kind
+        format.html { render :action => 'new'}
       end
     end
   end
 
   def edit
     @form = CustomFormsPlugin::Form.find(params[:id])
+    @kind = @form.kind
   end
 
   def update
@@ -42,11 +53,12 @@ class CustomFormsPluginMyprofileController < MyProfileController
     normalize_positions(@form)
 
     respond_to do |format|
-      if @form.save
-        flash[:notice] = _("Custom form %s was successfully updated.") % @form.name
+      if @form.save!
+        session[:notice] = _("%s was successfully updated") % @form.name
         format.html { redirect_to(:action=>'index') }
       else
-        session['notice'] = _('Form could not be updated')
+        session['notice'] = _('The %s could not be updated') % _(params[:form][:kind])
+        @kind = @form.kind
         format.html { render :action => 'edit' }
       end
     end
@@ -56,9 +68,9 @@ class CustomFormsPluginMyprofileController < MyProfileController
     @form = CustomFormsPlugin::Form.find(params[:id])
     begin
       @form.destroy
-      session[:notice] = _('Form removed')
+      session[:notice] = _('The %s was removed') % _(@form.kind)
     rescue
-      session[:notice] = _('Form could not be removed')
+      session[:notice] = _('The %s could not be removed') % _(@form.kind)
     end
     redirect_to :action => 'index'
   end
@@ -113,6 +125,35 @@ class CustomFormsPluginMyprofileController < MyProfileController
       field.alternatives.sort_by{ |alt| alt.position.to_i }.each do |alt|
         alt.position = counter
         counter += 1
+      end
+    end
+  end
+
+  def add_gallery_in_form(form, profile, data)
+    return form.save unless data
+    form_image = UploadedFile.new(
+      :uploaded_data => data,
+      :profile => profile,
+      :parent => nil,
+    )
+
+    form_settings = Noosfero::Plugin::Settings.new(profile, CustomFormsPlugin)
+    form_gallery = Gallery.where(id: form_settings.gallery_id).first
+    unless form_gallery
+      form_gallery = Gallery.new(profile: profile, name: _("Query Gallery"))
+    end
+
+    form_gallery.images << form_image
+    @form.image = form_image
+    form_with_image = @form.save && form_gallery.save
+    @form.errors.messages.merge!(form_gallery.errors.messages)
+    form_with_image
+  end
+
+  def remove_empty_alternatives
+    if params[:form]['fields_attributes'].present?
+      params[:form]['fields_attributes'].each do |key, value|
+        value['alternatives_attributes'].delete_if {|id, e| e['label'].blank? } if value['alternatives_attributes'].present?
       end
     end
   end

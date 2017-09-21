@@ -23,25 +23,29 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Weblate 2.9-dev\n"
 
-#: ../controllers/custom_forms_plugin_myprofile_controller.rb:26
+#: ../controllers/custom_forms_plugin_myprofile_controller.rb:28
 msgid "Custom form %s was successfully created."
 msgstr "O formulário %s foi criado com sucesso."
 
-#: ../controllers/custom_forms_plugin_myprofile_controller.rb:46
+#: ../controllers/custom_forms_plugin_myprofile_controller.rb:48
 msgid "Custom form %s was successfully updated."
 msgstr "O formulário personalizado %s foi atualizado com sucesso."
 
-#: ../controllers/custom_forms_plugin_myprofile_controller.rb:49
+#: ../controllers/custom_forms_plugin_myprofile_controller.rb:51
 msgid "Form could not be updated"
 msgstr "O formulário não pode ser atualizado"
 
-#: ../controllers/custom_forms_plugin_myprofile_controller.rb:59
+#: ../controllers/custom_forms_plugin_myprofile_controller.rb:61
 msgid "Form removed"
 msgstr "Formulário removido"
 
-#: ../controllers/custom_forms_plugin_myprofile_controller.rb:61
+#: ../controllers/custom_forms_plugin_myprofile_controller.rb:63
 msgid "Form could not be removed"
 msgstr "O formulário não pode ser removido"
+
+#: ../controllers/custom_forms_plugin_myprofile_controller.rb:133
+msgid "Query Gallery"
+msgstr "Galeria de enquetes"
 
 #: ../controllers/custom_forms_plugin_profile_controller.rb:31
 msgid "Submission saved"
@@ -84,19 +88,19 @@ msgstr "%{requestor} quer que você preencha algumas informações adicionais."
 msgid "is mandatory."
 msgstr "é obrigatório."
 
-#: ../lib/custom_forms_plugin/form.rb:68
+#: ../lib/custom_forms_plugin/form.rb:73
 msgid "Invalid string format of access."
 msgstr "Tipo de acesso inválido."
 
-#: ../lib/custom_forms_plugin/form.rb:72 ../lib/custom_forms_plugin/form.rb:77
+#: ../lib/custom_forms_plugin/form.rb:77 ../lib/custom_forms_plugin/form.rb:82
 msgid "There is no profile with the provided id."
 msgstr "Não existe perfil com o id fornecido."
 
-#: ../lib/custom_forms_plugin/form.rb:82
+#: ../lib/custom_forms_plugin/form.rb:87
 msgid "Invalid type format of access."
 msgstr "Formato de tipo de acesso inválido."
 
-#: ../lib/custom_forms_plugin/form.rb:88
+#: ../lib/custom_forms_plugin/form.rb:93
 msgid "The time range selected is invalid."
 msgstr "A faixa de tempo selecionada é inválida."
 
@@ -122,18 +126,26 @@ msgid "From %s until %s"
 msgstr "De %s a %s"
 
 #: ../lib/custom_forms_plugin/helper.rb:55
+msgid "Public after query ends"
+msgstr "Público após o fim da enquete"
+
+#: ../lib/custom_forms_plugin/helper.rb:56
+msgid "Private"
+msgstr ""
+
+#: ../lib/custom_forms_plugin/helper.rb:63
 msgid "Select"
 msgstr "Selecione"
 
-#: ../lib/custom_forms_plugin/helper.rb:61
+#: ../lib/custom_forms_plugin/helper.rb:69
 msgid "Text field"
 msgstr "Campo de texto"
 
-#: ../lib/custom_forms_plugin/helper.rb:62
+#: ../lib/custom_forms_plugin/helper.rb:70
 msgid "Select field"
 msgstr "Campo de seleção"
 
-#: ../lib/custom_forms_plugin/helper.rb:106
+#: ../lib/custom_forms_plugin/helper.rb:114
 msgid "Hold down Ctrl to select options"
 msgstr "Segure Ctrl para selecionar as opções"
 
@@ -166,44 +178,56 @@ msgid "Remove field"
 msgstr "Remover campo"
 
 #: ../views/custom_forms_plugin_myprofile/_form.html.erb:4
-#: ../views/custom_forms_plugin_myprofile/_form.html.erb:30
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:37
 #: ../views/custom_forms_plugin_myprofile/index.html.erb:6
 #: ../views/custom_forms_plugin_profile/show.html.erb:19
 msgid "Name"
 msgstr "Nome"
 
 #: ../views/custom_forms_plugin_myprofile/_form.html.erb:5
+msgid "Image"
+msgstr ""
+
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:17
+msgid "Result Access"
+msgstr "Acesso aos resultados"
+
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:6
 msgid "What is the time limit for this form to be filled?"
 msgstr "Qual o período limite em que esse formulário pode ser preenchido?"
 
-#: ../views/custom_forms_plugin_myprofile/_form.html.erb:11
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:14
+msgid "Identifier"
+msgstr ""
+
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:15
 #: ../views/custom_forms_plugin_myprofile/index.html.erb:9
 msgid "Access"
 msgstr "Acesso"
 
-#: ../views/custom_forms_plugin_myprofile/_form.html.erb:14
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:21
 msgid "Triggered on membership request as requirement for approval"
 msgstr "Disparado para novos integrantes como requisito de aprovação"
 
-#: ../views/custom_forms_plugin_myprofile/_form.html.erb:16
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:23
 msgid "Triggered after membership"
 msgstr "Disparado depois da aprovação de um novo integrante"
 
-#: ../views/custom_forms_plugin_myprofile/_form.html.erb:27
-#: ../views/custom_forms_plugin_myprofile/_form.html.erb:36
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:34
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:43
 msgid "This field will be added automatically to your form"
 msgstr "Esse campo será adicionado automaticamente no seu formulário"
 
-#: ../views/custom_forms_plugin_myprofile/_form.html.erb:39
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:46
 #: ../views/custom_forms_plugin_profile/show.html.erb:20
 msgid "Email"
 msgstr "E-mail"
 
-#: ../views/custom_forms_plugin_myprofile/_form.html.erb:53
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:60
 msgid "Add a new text field"
 msgstr "Adicionar novo campo de texto"
 
-#: ../views/custom_forms_plugin_myprofile/_form.html.erb:54
+#: ../views/custom_forms_plugin_myprofile/_form.html.erb:61
 msgid "Add a new select field"
 msgstr "Adicionar novo campo de seleção"
 
@@ -310,16 +334,16 @@ msgid "User"
 msgstr "Usuário"
 
 #: ../views/custom_forms_plugin_myprofile/pending.html.erb:9
+#: ../views/custom_forms_plugin_myprofile/submissions.html.erb:13
+msgid "Sort by"
+msgstr "Ordenar por"
+
+#: ../views/custom_forms_plugin_myprofile/pending.html.erb:9
 #: ../views/custom_forms_plugin_myprofile/pending.html.erb:14
 #: ../views/custom_forms_plugin_myprofile/submissions.html.erb:13
 #: ../views/custom_forms_plugin_myprofile/submissions.html.erb:18
 msgid "Time"
 msgstr "Tempo"
-
-#: ../views/custom_forms_plugin_myprofile/pending.html.erb:9
-#: ../views/custom_forms_plugin_myprofile/submissions.html.erb:13
-msgid "Sort by"
-msgstr "Ordenar por"
 
 #: ../views/custom_forms_plugin_myprofile/pending.html.erb:26
 #: ../views/custom_forms_plugin_myprofile/submissions.html.erb:31
