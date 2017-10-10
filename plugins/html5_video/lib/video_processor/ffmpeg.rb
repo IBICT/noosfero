@@ -1,9 +1,15 @@
+require 'RMagick'
+
 # Works for ffmpeg version 2.8.6-1~bpo8 shiped by Debian Jessie Backports
 # https://packages.debian.org/jessie-backports/ffmpeg
 # Add this line to your /etc/apt/sources.list:
 # deb http://http.debian.net/debian jessie-backports main
 # then: aptitude install ffmpeg
-class Html5VideoPlugin::Ffmpeg
+class VideoProcessor::Ffmpeg
+
+  def _(str)
+    str
+  end
 
   def run(*parameters)
     parameters = parameters.flatten
@@ -134,6 +140,7 @@ class Html5VideoPlugin::Ffmpeg
   end
 
   def valid_abrate_for_web(info)
+    return 0 if info.audio_stream.empty?
     if brate = info.audio_stream[0][:bitrate]
       brate = 8 if brate < 8
       (brate>128)? 128 : brate

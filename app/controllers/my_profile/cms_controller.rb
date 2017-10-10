@@ -364,12 +364,6 @@ class CmsController < MyProfileController
     render :text => article_list_to_json(results).html_safe, :content_type => 'application/json'
   end
 
-  def search_article_privacy_exceptions
-    arg = params[:q].downcase
-    result = profile.members.where('LOWER(name) LIKE ?', "%#{arg}%")
-    render :text => prepare_to_token_input(result).to_json
-  end
-
   def media_upload
     parent = check_parent(params[:parent_id])
     if request.post?
@@ -391,6 +385,27 @@ class CmsController < MyProfileController
     paginate_options = {:page => params[:page].blank? ? 1 : params[:page] }
     @key = params[:key].to_sym
     load_recent_files(params[:parent_id], params[:q], paginate_options)
+  end
+
+  def files
+    @files = profile.files.paginate(per_page: per_page, page: params[:npage])
+    @filters = {
+      _('Name') => 'name',
+      _('Size (bigger first)') => 'size DESC',
+      _('Size (smaller first)') => 'size ASC'
+    }
+
+    @sort_by = params[:sort_by] || 'name'
+    if @sort_by.in?(@filters.values)
+      @files = @files.order(@sort_by)
+    else
+      @files = @files.order('name')
+    end
+
+    respond_to do |format|
+      format.html
+      format.js
+    end
   end
 
   protected

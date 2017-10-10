@@ -40,10 +40,11 @@ class CustomFormsPlugin::FormTest < ActiveSupport::TestCase
     assert_includes form.submissions, s2
   end
 
-  should 'set slug before validation based on name' do
+  should 'set slug amd identifier before validation based on name' do
     form = CustomFormsPlugin::Form.new(:name => 'Name', :identifier => 'name')
     form.valid?
     assert_equal form.name.to_slug, form.slug
+    assert_equal form.name.to_slug, form.identifier
   end
 
   should 'validates uniqueness of slug scoped on profile' do
@@ -304,6 +305,34 @@ class CustomFormsPlugin::FormTest < ActiveSupport::TestCase
     assert_not_includes CustomFormsPlugin::Form.by_kind(:survey), poll
     assert_includes CustomFormsPlugin::Form.by_kind(:poll), poll
     assert_not_includes CustomFormsPlugin::Form.by_kind(:poll), survey
+  end
+
+
+  should 'have a scope that retrieve forms by a status' do
+    profile = fast_create(Profile)
+    opened_survey = CustomFormsPlugin::Form.create!(:profile => profile, :name => 'Opened Survey', :identifier => 'opened-survey', :begining => Time.now - 1.day)
+    closed_survey = CustomFormsPlugin::Form.create!(:profile => profile, :name => 'Closed Survey', :identifier => 'closed-survey', :ending => Time.now - 1.day)
+    to_come_survey = CustomFormsPlugin::Form.create!(:profile => profile, :name => 'To Come Survey', :identifier => 'to-come-survey', :begining => Time.now + 1.day)
+
+    invalid_status = profile.forms.by_status('invalid_status')
+    assert_includes invalid_status, opened_survey
+    assert_includes invalid_status, closed_survey
+    assert_includes invalid_status, to_come_survey
+
+    opened = profile.forms.by_status('opened')
+    assert_includes opened, opened_survey
+    assert_not_includes opened, closed_survey
+    assert_not_includes opened, to_come_survey
+
+    closed = profile.forms.by_status('closed')
+    assert_not_includes closed, opened_survey
+    assert_includes closed, closed_survey
+    assert_not_includes closed, to_come_survey
+
+    to_come = profile.forms.by_status('to-come')
+    assert_not_includes to_come, opened_survey
+    assert_not_includes to_come, closed_survey
+    assert_includes to_come, to_come_survey
   end
 
   should 'not include admission membership in on membership named scope' do
