@@ -22,9 +22,6 @@
 [submodule "plugins/dialoga"]
 	path = plugins/dialoga
 	url = https://gitlab.com/noosfero-plugins/dialoga-plugin.git
-[submodule "plugins/serpro_captcha"]
-	path = plugins/serpro_captcha
-	url = https://gitlab.com/noosfero-plugins/serpro_captcha.git
 [submodule "plugins/recaptcha"]
 	path = plugins/recaptcha
 	url = https://gitlab.com/noosfero-plugins/recaptcha.git
@@ -34,9 +31,6 @@
 [submodule "plugins/community_hub"]
 	path = plugins/community_hub
 	url = https://gitlab.com/noosfero-plugins/community_hub.git
-[submodule "plugins/serpro_integration"]
-	path = plugins/serpro_integration
-	url = https://gitlab.com/noosfero-plugins/serpro_integration.git
 [submodule "public/designs/themes/conference"]
 	path = public/designs/themes/conference
 	url = https://gitlab.com/noosfero-themes/conference.git
@@ -46,15 +40,6 @@
 [submodule "public/designs/themes/presidencia"]
 	path = public/designs/themes/presidencia
 	url = https://gitlab.com/noosfero-themes/presidencia.git
-[submodule "public/designs/themes/planejamento-serpro"]
-	path = public/designs/themes/planejamento-serpro
-	url = https://gitlab.com/noosfero-themes/planejamento-serpro.git
-[submodule "public/designs/themes/voce-serpro"]
-	path = public/designs/themes/voce-serpro
-	url = https://gitlab.com/noosfero-themes/voce-serpro.git
-[submodule "public/designs/themes/softwarepublico"]
-	path = public/designs/themes/softwarepublico
-	url = https://gitlab.com/noosfero-themes/softwarepublico.git
 [submodule "public/designs/themes/mrosc-theme"]
 	path = public/designs/themes/mrosc-theme
 	url = https://gitlab.com/noosfero-themes/mrosc-theme.git
@@ -70,12 +55,6 @@
 [submodule "public/designs/themes/participa-theme"]
 	path = public/designs/themes/participa-theme
 	url = https://gitlab.com/noosfero-themes/participa-theme.git
-[submodule "public/designs/themes/serpro"]
-	path = public/designs/themes/serpro
-	url = https://gitlab.com/noosfero-themes/serpro.git
-[submodule "public/designs/themes/voce-serpro-novo"]
-	path = public/designs/themes/voce-serpro-novo
-	url = https://gitlab.com/noosfero-themes/voce-serpro-novo.git
 [submodule "public/designs/themes/juventude"]
 	path = public/designs/themes/juventude
 	url = https://gitlab.com/noosfero-themes/juventude.git
@@ -88,30 +67,9 @@
 [submodule "public/designs/themes/participatorio-theme"]
 	path = public/designs/themes/participatorio-theme
 	url = https://gitlab.com/noosfero-themes/participatorio-theme.git
-[submodule "public/designs/themes/sinesp"]
-	path = public/designs/themes/sinesp
-	url = https://gitlab.com/noosfero-themes/sinesp.git
-[submodule "public/designs/themes/maranhao"]
-	path = public/designs/themes/maranhao
-	url = https://gitlab.com/noosfero-themes/maranhao.git
-[submodule "public/designs/themes/minjustica"]
-	path = public/designs/themes/minjustica
-	url = https://gitlab.com/noosfero-themes/minjustica.git
-[submodule "rest-clients/confjuvapp"]
-	path = rest-clients/confjuvapp
-	url = https://gitlab.com/noosfero-apps/confjuvapp.git
-[submodule "rest-clients/proposal-app"]
-	path = rest-clients/proposal-app
-	url = https://gitlab.com/noosfero-apps/proposal-app.git
 [submodule "public/designs/themes/dialoga"]
 	path = public/designs/themes/dialoga
 	url = https://gitlab.com/noosfero-themes/dialoga.git
 [submodule "public/designs/themes/consulta"]
 	path = public/designs/themes/consulta
 	url = https://gitlab.com/noosfero-themes/consulta.git
-[submodule "public/designs/themes/planejamento-2017"]
-	path = public/designs/themes/planejamento-2017
-	url = https://gitlab.com/noosfero-themes/planejamento-2017.git
-[submodule "public/designs/themes/planejamento-2016"]
-	path = public/designs/themes/planejamento-2016
-	url = https://gitlab.com/noosfero-themes/planejamento-2016.git
